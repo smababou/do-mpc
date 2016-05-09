@@ -5,7 +5,7 @@
 #    DO-MPC: An environment for the easy, modular and efficient implementation of
 #            robust nonlinear model predictive control
 #
-#    The MIT License (MIT)
+#	 The MIT License (MIT)
 #
 #    Copyright (c) 2014-2015 Sergio Lucia, Alexandru Tatulea-Codrean, Sebastian Engell
 #                            TU Dortmund. All rights reserved
@@ -29,42 +29,20 @@
 #    SOFTWARE.
 #
 
-import setup_nlp
 from casadi import *
-import numpy as NP
 import core_do_mpc
+def observer(model):
 
-def setup_solver(configuration):
+	# Full state feedback
+	observer_dict = {'x':1}
+	observer = core_do_mpc.observer(model,observer_dict)
+	# here some functions depending on observer_1
 
+	# Implement here your own observer
 
-    # Call setup_nlp to generate the NLP
-    nlp_dict_out = setup_nlp.setup_nlp(configuration.model, configuration.optimizer)
-
-    # Set options
-    opts = {}
-    opts["expand"] = True
-    opts["ipopt.linear_solver"] = configuration.optimizer.linear_solver
-    #TODO: this should be passed as parameters of the optimizer class
-    opts["ipopt.max_iter"] = 500
-    opts["ipopt.tol"] = 1e-6
-    # Setup the solver
-    solver = nlpsol("solver", configuration.optimizer.nlp_solver, nlp_dict_out['nlp_fcn'], opts)
-    arg = {}
-
-    # Initial condition
-    arg["x0"] = nlp_dict_out['vars_init']
-
-    # Bounds on x
-    arg["lbx"] = nlp_dict_out['vars_lb']
-    arg["ubx"] = nlp_dict_out['vars_ub']
-
-    # Bounds on g
-    arg["lbg"] = nlp_dict_out['lbg']
-    arg["ubg"] = nlp_dict_out['ubg']
-    # NLP parameters
-    arg["p"] = configuration.model.ocp.u0
-    # TODO: better way than adding new fields here?
-    configuration.optimizer.solver = solver
-    configuration.optimizer.arg = arg
-    configuration.optimizer.nlp_dict_out = nlp_dict_out
-    return configuration
+	"""
+	--------------------------------------------------------------------------
+	template_observer: pass information (not necessary to edit)
+	--------------------------------------------------------------------------
+	"""
+	return observer

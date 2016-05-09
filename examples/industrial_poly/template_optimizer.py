@@ -1,0 +1,101 @@
+# 	 -*- coding: utf-8 -*-
+#
+#    This file is part of DO-MPC
+#
+#    DO-MPC: An environment for the easy, modular and efficient implementation of
+#            robust nonlinear model predictive control
+#
+#    The MIT License (MIT)
+#
+#    Copyright (c) 2014-2015 Sergio Lucia, Alexandru Tatulea-Codrean, Sebastian Engell
+#                            TU Dortmund. All rights reserved
+#
+#    Permission is hereby granted, free of charge, to any person obtaining a copy
+#    of this software and associated documentation files (the "Software"), to deal
+#    in the Software without restriction, including without limitation the rights
+#    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#    copies of the Software, and to permit persons to whom the Software is
+#    furnished to do so, subject to the following conditions:
+#
+#    The above copyright notice and this permission notice shall be included in all
+#    copies or substantial portions of the Software.
+#
+#    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#    SOFTWARE.
+#
+from casadi import *
+import numpy as NP
+import core_do_mpc
+
+def optimizer(model):
+
+    """
+    --------------------------------------------------------------------------
+    template_optimizer: tuning parameters
+    --------------------------------------------------------------------------
+    """
+
+    # Prediction horizon
+    n_horizon = 20
+    # Robust horizon, set to 0 for standard NMPC
+    n_robust = 0
+    # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
+    open_loop = 0
+    # Sampling time
+    t_step = 50.0/3600.0
+    # Simulation time
+    t_end = 2.0
+    # Choose type of state discretization (collocation or multiple-shooting)
+    state_discretization = 'collocation'
+    # Degree of interpolating polynomials: 1 to 5
+    poly_degree = 2
+    # Collocation points: 'legendre' or 'radau'
+    collocation = 'radau'
+    # Number of finite elements per control interval
+    n_fin_elem = 1
+    # NLP Solver and linear solver
+    nlp_solver = 'ipopt'
+    qp_solver = 'qpoases'
+
+    # It is highly recommended that you use a more efficient linear solver
+    # such as the hsl linear solver MA27, which can be downloaded as a precompiled
+    # library and can be used by IPOPT on run time
+
+    linear_solver = 'ma27'
+
+    # GENERATE C CODE shared libraries NOTE: Not currently supported
+    generate_code = 0
+
+    """
+    --------------------------------------------------------------------------
+    template_optimizer: uncertain parameters
+    --------------------------------------------------------------------------
+    """
+    # Define the different possible values of the uncertain parameters in the scenario tree
+    delH_R_values = NP.array([950.0, 950.0 * 1.30, 950.0 * 0.70])
+    k_0_values = NP.array([7.0*1.00, 7.0*1.30, 7.0*0.70])
+    uncertainty_values = NP.array([delH_R_values, k_0_values])
+    # Parameteres of the NLP which may vary along the time (For example a set point that varies at a given time)
+    set_point = SX.sym('set_point')
+    parameters_nlp = NP.array([set_point])
+
+
+    """
+    --------------------------------------------------------------------------
+    template_optimizer: pass_information (not necessary to edit)
+    --------------------------------------------------------------------------
+    """
+    # Check if the user has introduced the data correctly
+    optimizer_dict = {'n_horizon':n_horizon, 'n_robust':n_robust, 't_step': t_step,
+    't_end':t_end,'poly_degree': poly_degree, 'collocation':collocation,
+    'n_fin_elem': n_fin_elem,'generate_code':generate_code,'open_loop': open_loop,
+    'uncertainty_values':uncertainty_values,'parameters_nlp':parameters_nlp,
+    'state_discretization':state_discretization,'nlp_solver': nlp_solver,
+    'linear_solver':linear_solver, 'qp_solver':qp_solver}
+    optimizer_1 = core_do_mpc.optimizer(model,optimizer_dict)
+    return optimizer_1

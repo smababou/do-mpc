@@ -5,7 +5,7 @@
 #    DO-MPC: An environment for the easy, modular and efficient implementation of
 #            robust nonlinear model predictive control
 #
-#    The MIT License (MIT)
+#	 The MIT License (MIT)
 #
 #    Copyright (c) 2014-2015 Sergio Lucia, Alexandru Tatulea-Codrean, Sebastian Engell
 #                            TU Dortmund. All rights reserved
@@ -29,14 +29,20 @@
 #    SOFTWARE.
 #
 
+from casadi import *
+import core_do_mpc
+def observer(model):
 
-# This script saves the results to a .mat file that can be loaded using Matlab
+	# Full state feedback
+	observer_dict = {'x':1}
+	observer = core_do_mpc.observer(model,observer_dict)
+	# here some functions depending on observer_1
 
+	# Implement here your own observer
 
-def export_to_matlab(mpc_states, mpc_control, mpc_time, mpc_cpu, index_mpc, x_scaling, u_scaling, export_name):
-    # FIXME Inprove this script to save also algebraic states
-    mpc_states = mpc_states[:index_mpc, :] * x_scaling
-    mpc_control = mpc_control[1:index_mpc, :] * u_scaling
-    mpc_time = NP.array([mpc_time[:index_mpc]]).T
-    mpc_cpu = NP.array([mpc_cpu[1:index_mpc]]).T
-    scipy.io.savemat(export_name, mdict={"mpc_states":mpc_states,"mpc_control":mpc_control, "mpc_time":mpc_time, "mpc_cpu":mpc_cpu})
+	"""
+	--------------------------------------------------------------------------
+	template_observer: pass information (not necessary to edit)
+	--------------------------------------------------------------------------
+	"""
+	return observer
