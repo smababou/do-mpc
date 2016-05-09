@@ -69,7 +69,7 @@ def optimizer(model):
     # such as the hsl linear solver MA27, which can be downloaded as a precompiled
     # library and can be used by IPOPT on run time
 
-    linear_solver = 'ma27'
+    linear_solver = 'mumps'
 
 
     """
