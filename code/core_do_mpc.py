@@ -1,32 +1,25 @@
-# 	 -*- coding: utf-8 -*-
 #
-#    This file is part of DO-MPC
+#   This file is part of do-mpc
 #
-#    DO-MPC: An environment for the easy, modular and efficient implementation of
-#            robust nonlinear model predictive control
+#   do-mpc: An environment for the easy, modular and efficient implementation of
+#        robust nonlinear model predictive control
 #
-#    The MIT License (MIT)
+#   Copyright (c) 2014-2016 Sergio Lucia, Alexandru Tatulea-Codrean
+#                        TU Dortmund. All rights reserved
 #
-#    Copyright (c) 2014-2015 Sergio Lucia, Alexandru Tatulea-Codrean
-#                            TU Dortmund. All rights reserved
+#   do-mpc is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU Lesser General Public License as
+#   published by the Free Software Foundation, either version 3
+#   of the License, or (at your option) any later version.
 #
-#    Permission is hereby granted, free of charge, to any person obtaining a copy
-#    of this software and associated documentation files (the "Software"), to deal
-#    in the Software without restriction, including without limitation the rights
-#    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#    copies of the Software, and to permit persons to whom the Software is
-#    furnished to do so, subject to the following conditions:
+#   do-mpc is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU Lesser General Public License for more details.
 #
-#    The above copyright notice and this permission notice shall be included in all
-#    copies or substantial portions of the Software.
+#   You should have received a copy of the GNU General Public License
+#   along with do-mpc.  If not, see <http://www.gnu.org/licenses/>.
 #
-#    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#    SOFTWARE.
 
 import setup_nlp
 from casadi import *
@@ -98,7 +91,7 @@ class simulator:
         rhs_unscaled = substitute(rhs_unscaled, model_simulator.u, model_simulator.u * model_simulator.ocp.u_scaling)
         dae = {'x':model_simulator.x, 'p':vertcat(model_simulator.u,model_simulator.p), 'ode':rhs_unscaled}
         opts = param_dict["integrator_opts"]
-        #FIXME Check the scaling factors!
+        #NOTE: Check the scaling factors (appear to be fine)
         simulator_do_mpc = integrator("simulator", param_dict["integration_tool"], dae,  opts)
         self.simulator = simulator_do_mpc
         self.plot_states = param_dict["plot_states"]
@@ -195,7 +188,7 @@ class configuration:
         opts = {}
         opts["expand"] = True
         opts["ipopt.linear_solver"] = self.optimizer.linear_solver
-        #TODO: this could be passed as parameters of the optimizer class
+        #NOTE: this could be passed as parameters of the optimizer class
         opts["ipopt.max_iter"] = 500
         opts["ipopt.tol"] = 1e-6
         # Setup the solver
@@ -229,7 +222,7 @@ class configuration:
 
     def make_step_observer(self):
         self.make_measurement()
-        self.observer.observed_states = self.simulator.measurement # TODO: this is a dummy observer
+        self.observer.observed_states = self.simulator.measurement # NOTE: this is a dummy observer
 
     def make_step_simulator(self):
         # Extract the necessary information for the simulation
@@ -246,7 +239,7 @@ class configuration:
         self.simulator.tf_sim = self.simulator.tf_sim + self.simulator.t_step_simulator
 
     def make_measurement(self):
-        # TODO: Here implement the own measurement function (or load it)
+        # NOTE: Here implement the own measurement function (or load it)
         # This is a dummy measurement
         self.simulator.measurement = self.simulator.xf_sim
 

@@ -1,35 +1,29 @@
-# 	 -*- coding: utf-8 -*-
 #
-#    This file is part of DO-MPC
+#   This file is part of do-mpc
 #
-#    DO-MPC: An environment for the easy, modular and efficient implementation of
-#            robust nonlinear model predictive control
+#   do-mpc: An environment for the easy, modular and efficient implementation of
+#        robust nonlinear model predictive control
 #
-#    The MIT License (MIT)
+#   Copyright (c) 2014-2016 Sergio Lucia, Alexandru Tatulea-Codrean
+#                        TU Dortmund. All rights reserved
 #
-#    Copyright (c) 2014-2015 Sergio Lucia, Alexandru Tatulea-Codrean, Sebastian Engell
-#                            TU Dortmund. All rights reserved
+#   do-mpc is free software: you can redistribute it and/or modify
+#   it under the terms of the GNU Lesser General Public License as
+#   published by the Free Software Foundation, either version 3
+#   of the License, or (at your option) any later version.
 #
-#    Permission is hereby granted, free of charge, to any person obtaining a copy
-#    of this software and associated documentation files (the "Software"), to deal
-#    in the Software without restriction, including without limitation the rights
-#    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-#    copies of the Software, and to permit persons to whom the Software is
-#    furnished to do so, subject to the following conditions:
+#   do-mpc is distributed in the hope that it will be useful,
+#   but WITHOUT ANY WARRANTY; without even the implied warranty of
+#   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#   GNU Lesser General Public License for more details.
 #
-#    The above copyright notice and this permission notice shall be included in all
-#    copies or substantial portions of the Software.
+#   You should have received a copy of the GNU General Public License
+#   along with do-mpc.  If not, see <http://www.gnu.org/licenses/>.
 #
-#    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-#    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-#    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-#    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-#    SOFTWARE.
 #
 #   Important parts of this script were coded in colaboration with Joel Andersson.
-#   His support is gratefully acknowledged
+#   his support is gratefully acknowledged
+
 from casadi import *
 import numpy as NP
 import core_do_mpc
@@ -89,7 +83,7 @@ def setup_nlp(model, optimizer):
     up = vertcat(u,p)
 
     # Right hand side of the ODEs
-    # FIXME look scaling
+    # NOTE: look scaling (appears to be fine)
     for i in (x0,x_ub,x_lb,x_init): i /= x_scaling
     xdot = substitute(xdot,x,x*x_scaling)/x_scaling
     for i in (u_ub,u_lb,u_init): i /= u_scaling
@@ -321,14 +315,20 @@ def setup_nlp(model, optimizer):
     elif state_discretization == 'multiple-shooting':
 
       # Create an integrator instance
-      ifcn = Integrator('cvodes',ffcn)
-      ifcn.setOption("exact_jacobian",True)
-      ifcn.setOption("reltol",1e-8)
-      ifcn.setOption("abstol",1e-8)
+    #   ifcn = Integrator('cvodes',ffcn)
+    #   ifcn.setOption("exact_jacobian",True)
+    #   ifcn.setOption("reltol",1e-8)
+    #   ifcn.setOption("abstol",1e-8)
 
       # Set options
-      ifcn.setOption("tf",t_step)
-
+      #ifcn.setOption("tf",t_step)
+      x_ms = MX.sym('x_ms',nx)
+      u_ms = MX.sym('u_ms',nu)
+      p_ms = MX.sym('p_ms',np)
+      xdot_ms = x_ms
+      dae = {'x':x_ms, 'p':vertcat(u_ms,p_ms), 'ode':xdot_ms}
+      opts = {"abstol":1e-10,"reltol":1e-10, "exact_jacobian":True, 'tf':t_step}
+      ifcn = integrator("simulator_ms",'cvodes', dae,  opts)
 
       # No implicitly defined variables
       n_ik = 0
@@ -502,8 +502,9 @@ def setup_nlp(model, optimizer):
 
             # Call the integrator
             #FIXME: update so that multiple-shooting works
-            ifcn_out = ifcn.call(integratorIn(x0=X_ks,p=vertcat(U_ks,P_ksb)))
-            xf_ksb = ifcn_out[INTEGRATOR_XF]
+            #pdb.set_trace()
+            ifcn_out = ifcn(x0=X_ks,p=vertcat(U_ks,P_ksb))
+            xf_ksb = ifcn_out['xf']
 
           # Add continuity equation to NLP
           g.append(X[k+1,child_scenario[k][s][b]] - xf_ksb)
