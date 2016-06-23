@@ -1,4 +1,4 @@
-#
+#-*- coding: utf-8 -*-
 #   This file is part of do-mpc
 #
 #   do-mpc: An environment for the easy, modular and efficient implementation of
@@ -20,7 +20,6 @@
 #   You should have received a copy of the GNU General Public License
 #   along with do-mpc.  If not, see <http://www.gnu.org/licenses/>.
 #
-
 from casadi import *
 import numpy as NP
 import core_do_mpc
