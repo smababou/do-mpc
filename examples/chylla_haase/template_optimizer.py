@@ -41,13 +41,13 @@ def optimizer(model):
     """
 
     # Prediction horizon
-    n_horizon = 1
+    n_horizon = 10
     # Robust horizon, set to 0 for standard NMPC
     n_robust = 0
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
     open_loop = 0
     # Sampling time
-    t_step = 30.0
+    t_step = 1.0
     # Simulation time
     t_end = 140*60      # simulation time in minutes [min]
     # Choose type of state discretization (collocation or multiple-shooting)

@@ -27,7 +27,7 @@ import numpy as NP
 import core_do_mpc
 from matplotlib.ticker import MaxNLocator
 import scipy.io
-
+import pdb
 
 class mpc_data:
     "A class for the definition of the mpc data that is managed throughout the mpc loop"
@@ -52,7 +52,7 @@ class mpc_data:
         self.mpc_cpu = NP.resize(NP.array([]),(1, 1))
         self.mpc_parameters = NP.resize(NP.array([]),(1, np))
         # Initialize with initial conditions
-        self.mpc_states[0,:] = configuration.model.ocp.x0 / configuration.model.ocp.x_scaling
+        self.mpc_states[0,:] = NP.asarray(configuration.model.ocp.x0 / configuration.model.ocp.x_scaling)[:,0]
         self.mpc_control[0,:] = configuration.model.ocp.u0 / configuration.model.ocp.u_scaling
         self.mpc_time[0] = 0
 

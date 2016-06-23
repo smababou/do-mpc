@@ -73,23 +73,29 @@ def setup_nlp(model, optimizer):
     # Size of the state, control and parameter vector
 
     nx = x.size(1)
+    nz = z.size(1)
     nu = u.size(1)
     np = p.size(1)
-
+    
     # Generate, scale and initialize all the necessary functions
     # Consider as initial guess the initial conditions
     x_init = deepcopy(x0)
     u_init = deepcopy(u0)
     up = vertcat(u,p)
-
+    # Prepare data for the DAE case - type robustness/correction        
+   
     # Right hand side of the ODEs
-    # NOTE: look scaling (appears to be fine)
-    for i in (x0,x_ub,x_lb,x_init): i /= x_scaling
+    # NOTE: check scaling (appears to be fine) 
+    # NOTE: why doesn't condensed scaling work? (for loop??)
+    x_init = x_init/x_scaling
+    x_ub   = x_ub/x_scaling
+    x_lb   = x_lb/x_scaling
+    #for i in (x_ub,x_lb,x_init): i /= x_scaling
     xdot = substitute(xdot,x,x*x_scaling)/x_scaling
     for i in (u_ub,u_lb,u_init): i /= u_scaling
     xdot = substitute(xdot,u,u*u_scaling)
     ffcn = Function('ffcn',[x,up],[xdot])
-
+    
     # Constraints, possibly soft
     # Epsilon for the soft constraints
     cons = substitute(cons,x,x*x_scaling)
@@ -156,7 +162,6 @@ def setup_nlp(model, optimizer):
     stored in the variable p_scenario
     -----------------------------------------------------------------------------------
     """
-
     ## Collocation discretization
     if state_discretization == 'collocation':
 
@@ -246,11 +251,10 @@ def setup_nlp(model, optimizer):
           ik_split[i,j] = ik[offset:offset+nx]
 
           # Add the initial condition
-          ik_init[offset:offset+nx] = x_init
-
+          ik_init[offset:offset+nx] = NP.asarray(x_init)[:,0]
           # Add bounds
-          ik_lb[offset:offset+nx] = x_lb
-          ik_ub[offset:offset+nx] = x_ub
+          ik_lb[offset:offset+nx] = NP.asarray(x_lb)[:,0]
+          ik_ub[offset:offset+nx] = NP.asarray(x_ub)[:,0]
           offset += nx
 
         # All collocation points in subsequent finite elements
@@ -260,11 +264,11 @@ def setup_nlp(model, optimizer):
       xkf = ik[offset:offset+nx]
 
       # Add the initial condition
-      ik_init[offset:offset+nx] = x_init
+      ik_init[offset:offset+nx] = NP.asarray(x_init)[:,0]
 
       # Add bounds
-      ik_lb[offset:offset+nx] = x_lb
-      ik_ub[offset:offset+nx] = x_ub
+      ik_lb[offset:offset+nx] = NP.asarray(x_lb)[:,0]
+      ik_ub[offset:offset+nx] = NP.asarray(x_ub)[:,0]
       offset += nx
 
       # Check offset for consistency
@@ -412,15 +416,15 @@ def setup_nlp(model, optimizer):
         X_offset[k,s] = offset
 
         # Add the initial condition
-        vars_init[offset:offset+nx] = x_init
+        vars_init[offset:offset+nx] = NP.asarray(x_init)[:,0]
 
         if k==0:
-          vars_lb[offset:offset+nx] = x0
-          vars_ub[offset:offset+nx] = x0
+          vars_lb[offset:offset+nx] = NP.asarray(x0)[:,0]
+          vars_ub[offset:offset+nx] = NP.asarray(x0)[:,0]
 
         else:
-          vars_lb[offset:offset+nx] = x_lb
-          vars_ub[offset:offset+nx] = x_ub
+          vars_lb[offset:offset+nx] = NP.asarray(x_lb)[:,0]
+          vars_ub[offset:offset+nx] = NP.asarray(x_ub)[:,0]
         offset += nx
 
         # State trajectory if collocation
@@ -449,9 +453,9 @@ def setup_nlp(model, optimizer):
     for s in range(n_scenarios[nk]):
       X[nk,s] = V[offset:offset+nx]
       X_offset[nk,s] = offset
-      vars_lb[offset:offset+nx] = x_lb
-      vars_ub[offset:offset+nx] = x_ub
-      vars_init[offset:offset+nx] = x_init
+      vars_lb[offset:offset+nx] = NP.asarray(x_lb)[:,0]
+      vars_ub[offset:offset+nx] = NP.asarray(x_ub)[:,0]
+      vars_init[offset:offset+nx] = NP.asarray(x_init)[:,0]
       offset += nx
     if soft_constraint:
         # Last elements (epsilon) for soft constraints

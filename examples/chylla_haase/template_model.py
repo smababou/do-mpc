@@ -90,8 +90,8 @@ def model():
     pur   = SX.sym("pur")
     # Define the differential states as CasADi symbols
 
-    mM 			= SX.sym("mM")              #Monomer Mass
-    mP 			= SX.sym("mP")			    #Polymer Mass
+    mM 		= SX.sym("mM")              #Monomer Mass
+    mP 		= SX.sym("mP")			    #Polymer Mass
     TR  		= SX.sym("TR")				#Reactor Temperature
     Tjout 		= SX.sym("Tjout")			#Output Temperature of the coolant
     Tjin		= SX.sym("Tjin")			#Input Temperature of the coolant
@@ -175,14 +175,17 @@ def model():
 
     _x = vertcat(mM,mP,TR,Tjout,Tjin)
 
+    #_z = []
     _z = vertcat(mM_lag2,mP_lag2,T_lag2,Tjout_lag2,Tjin_lag1,Tjin_lag2,Tjin_lag3)
 
     _u = vertcat(VO,mMdot)
 
     _p = vertcat(pur)
 
-    _xdot = vertcat(dmM,dmP,dT,dTjout,dTjin,dmM_lag2,dmP_lag2,dT_lag2,dTjout_lag2,dTjin_lag1,dTjin_lag2,dTjin_lag3)
+    _xdot = vertcat(dmM,dmP,dT,dTjout,dTjin)
 
+    #_zdot = vertcat([])
+    _zdot = vertcat(dmM_lag2,dmP_lag2,dT_lag2,dTjout_lag2,dTjin_lag1,dTjin_lag2,dTjin_lag3)
 
     """
     --------------------------------------------------------------------------
@@ -197,17 +200,17 @@ def model():
     Tjin_init  	= 305.382
 
     #Initial conditions for Algebraic States
-    mM_lag2_init 	=  0.0
-    mP_lag2_init 	=  11.227
-    T_lag2_init  	=  305.382
+    mM_lag2_init 	   =  0.0
+    mP_lag2_init 	   =  11.227
+    T_lag2_init  	   =  305.382
     Tjout_lag2_init =  305.382
     Tjin_lag1_init  =  305.382
     Tjin_lag2_init  =  305.382
     Tjin_lag3_init  =  305.382
-    max_feed =31.752
+    max_feed        =   31.752
 
-    x0 = NP.array([mM_init,mP_init,T_init,Tjout_init,Tjin_init,mM_lag2_init, mP_lag2_init, T_lag2_init, Tjout_lag2_init, Tjin_lag1_init, Tjin_lag2_init, Tjin_lag3_init])
-
+    x0 = NP.array([mM_init,mP_init,T_init,Tjout_init,Tjin_init])
+    z0 = NP.array([mM_lag2_init, mP_lag2_init, T_lag2_init, Tjout_lag2_init, Tjin_lag1_init, Tjin_lag2_init, Tjin_lag3_init])
     # Bounds on the states. Use "inf" for unconstrained states
     mM_lb    = 0.0;                             mM_ub    = inf;
     mP_lb    = 0.0;					  	        mP_ub    = inf
@@ -223,8 +226,10 @@ def model():
     Tjin_lag2_lb  = 0.0;						Tjin_lag2_ub  = inf
     Tjin_lag3_lb  = 0.0;						Tjin_lag3_ub  = inf
 
-    x_lb = NP.array([mM_lb, mP_lb, T_lb, Tjout_lb, Tjin_lb, mM_lag2_lb, mP_lag2_lb, T_lag2_lb, Tjout_lag2_lb, Tjin_lag1_lb, Tjin_lag2_lb, Tjin_lag3_lb])
-    x_ub = NP.array([mM_ub, mP_ub, T_ub, Tjout_ub, Tjin_ub, mM_lag2_ub, mP_lag2_ub, T_lag2_ub, Tjout_lag2_ub, Tjin_lag1_ub, Tjin_lag2_ub, Tjin_lag3_ub])
+    x_lb = NP.array([mM_lb, mP_lb, T_lb, Tjout_lb, Tjin_lb])
+    x_ub = NP.array([mM_ub, mP_ub, T_ub, Tjout_ub, Tjin_ub])
+    z_lb = NP.array([mM_lag2_lb, mP_lag2_lb, T_lag2_lb, Tjout_lag2_lb, Tjin_lag1_lb, Tjin_lag2_lb, Tjin_lag3_lb])
+    z_ub = NP.array([mM_lag2_ub, mP_lag2_ub, T_lag2_ub, Tjout_lag2_ub, Tjin_lag1_ub, Tjin_lag2_ub, Tjin_lag3_ub])
     # Bounds on the control inputs. Use "inf" for unconstrained inputs
     VO_lb    = 0.0;		                        VO_ub = 100.00 ;		         VO_init = 100.0	;
     mMdot_lb = 0.0;		                        mMdot_ub = 0.0;	                 mMdot_init = 0.005;
@@ -280,7 +285,7 @@ def model():
     template_model: pass information (not necessary to edit)
     --------------------------------------------------------------------------
     """
-    model_dict = {'x':_x,'u': _u, 'rhs':_xdot,'p': _p, 'z':_z,'x0': x0,'x_lb': x_lb,'x_ub': x_ub, 'u0':u0, 'u_lb':u_lb, 'u_ub':u_ub, 'x_scaling':x_scaling, 'z_scaling':z_scaling, 'u_scaling':u_scaling, 'cons':cons,
+    model_dict = {'x':_x,'u': _u, 'rhs':_xdot,'p': _p, 'z':_z, 'aes': _zdot,'x0': x0, 'z0':z0, 'x_lb': x_lb,'x_ub': x_ub, 'z_lb': z_lb,'z_ub': z_ub, 'u0':u0, 'u_lb':u_lb, 'u_ub':u_ub, 'x_scaling':x_scaling, 'z_scaling':z_scaling, 'u_scaling':u_scaling, 'cons':cons,
     "cons_ub": cons_ub, 'cons_terminal':cons_terminal, 'cons_terminal_lb': cons_terminal_lb, 'cons_terminal_ub':cons_terminal_ub, 'soft_constraint': soft_constraint, 'penalty_term_cons': penalty_term_cons, 'maximum_violation': maximum_violation, 'mterm': mterm,'lterm':lterm, 'rterm':rterm}
     
     model = core_do_mpc.model(model_dict)

@@ -30,16 +30,24 @@ class ocp:
     """ A class that contains a full description of the optimal control problem and will be used in the model class. This is dependent on a specific element of a model class"""
     def __init__(self, param_dict, *opt):
         # Initial state and initial input
-        self.x0 = param_dict["x0"]
+        x0 = param_dict["x0"]
+        z0 = param_dict["z0"]
+        self.x0 = vertcat(x0,z0)#param_dict["x0"]
         self.u0 = param_dict["u0"]
         # Bounds for the states
-        self.x_lb = param_dict["x_lb"]
-        self.x_ub = param_dict["x_ub"]
+        x_lb = param_dict["x_lb"]
+        x_ub = param_dict["x_ub"]
+        z_lb = param_dict["z_lb"]
+        z_ub = param_dict["z_ub"]
+        self.x_lb = vertcat(x_lb,z_lb)#param_dict["x_lb"]
+        self.x_ub = vertcat(x_ub,z_ub)#param_dict["x_ub"]
         # Bounds for the inputs
         self.u_lb = param_dict["u_lb"]
         self.u_ub = param_dict["u_ub"]
         # Scaling factors
-        self.x_scaling = param_dict["x_scaling"]
+        x_scaling = param_dict["x_scaling"]
+        z_scaling = param_dict["z_scaling"]
+        self.x_scaling = vertcat(x_scaling,z_scaling)#param_dict["x_scaling"]
         self.u_scaling = param_dict["u_scaling"]
         # Symbolic nonlinear constraints
         self.cons = param_dict["cons"]
@@ -63,14 +71,20 @@ class model:
     """A class for the definition model equations and optimal control problem formulation"""
     def __init__(self, param_dict, *opt):
         # Assert for define length of param_dict
-        required_dimension = 24
+        required_dimension = 29
         if not (len(param_dict) == required_dimension):            raise Exception("Model / OCP information is incomplete. The number of elements in the dictionary is not correct")
         # Assign the main variables describing the model equations
-        self.x = param_dict["x"]
+        x = param_dict["x"]
+        z = param_dict["z"]
+        self.x = vertcat(x,z)#param_dict["x"]
         self.u = param_dict["u"]
         self.p = param_dict["p"]
         self.z = param_dict["z"]
-        self.rhs = param_dict["rhs"] # Right hand side of the DAE equations
+        odes = param_dict["rhs"]        
+        aes  = param_dict["aes"]
+        self.odes = param_dict["rhs"]
+        self.aes = param_dict["aes"]
+        self.rhs = vertcat(odes,aes)#param_dict["rhs"] # Right hand side of the DAE equations
          # Assign the main variables that describe the OCP
         self.ocp = ocp(param_dict)
 
@@ -87,6 +101,7 @@ class simulator:
         required_dimension = 9
         if not (len(param_dict) == required_dimension): raise Exception("Simulator information is incomplete. The number of elements in the dictionary is not correct")
         # Unscale the states on the rhs
+        #pdb.set_trace()
         rhs_unscaled = substitute(model_simulator.rhs, model_simulator.x, model_simulator.x * model_simulator.ocp.x_scaling)/model_simulator.ocp.x_scaling
         rhs_unscaled = substitute(rhs_unscaled, model_simulator.u, model_simulator.u * model_simulator.ocp.u_scaling)
         dae = {'x':model_simulator.x, 'p':vertcat(model_simulator.u,model_simulator.p), 'ode':rhs_unscaled}
@@ -246,9 +261,8 @@ class configuration:
     def prepare_next_iter(self):
         observed_states = self.observer.observed_states
         X_offset = self.optimizer.nlp_dict_out['X_offset']
-        nx = len(self.model.ocp.x0)
+        nx = self.model.ocp.x0.size(1)
         # Enforce the observed states as initial point for next optimization
-
         self.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = observed_states
         self.optimizer.arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = observed_states
         self.optimizer.arg["x0"] = self.optimizer.opt_result_step.optimal_solution
@@ -259,12 +273,11 @@ class configuration:
         mpc_iteration = self.simulator.mpc_iteration - 1 #Because already increased in the simulator
         data = self.mpc_data
         data.mpc_states = NP.append(data.mpc_states, [self.simulator.xf_sim], axis = 0)
-        #pdb.set_trace()
         data.mpc_control = NP.append(data.mpc_control, [self.optimizer.u_mpc], axis = 0)
-        data.mpc_alg = NP.append(data.mpc_alg, [NP.zeros(NP.size(self.model.z))], axis = 0) # TODO: To be completed for DAEs
+        #data.mpc_alg = NP.append(data.mpc_alg, [NP.zeros(NP.size(self.model.z))], axis = 0) # TODO: To be completed for DAEs
         data.mpc_time = NP.append(data.mpc_time, [[self.simulator.t0_sim]], axis = 0)
         data.mpc_cost = NP.append(data.mpc_cost, self.optimizer.opt_result_step.optimal_cost, axis = 0)
-        data.mpc_ref = NP.append(data.mpc_ref, [[0]], axis = 0) # TODO: To be completed
+        #data.mpc_ref = NP.append(data.mpc_ref, [[0]], axis = 0) # TODO: To be completed
         stats = self.optimizer.solver.stats()
         data.mpc_cpu = NP.append(data.mpc_cpu, [[stats['t_wall_mainloop']]], axis = 0)
         data.mpc_parameters = NP.append(data.mpc_parameters, [self.simulator.p_real_now(self.simulator.t0_sim)], axis = 0)
