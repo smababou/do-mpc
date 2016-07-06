@@ -49,15 +49,15 @@ def optimizer(model):
     # Sampling time
     t_step = 1.0
     # Simulation time
-    t_end = 140*60      # simulation time in minutes [min]
+    t_end = 140.0*1.0     # simulation time in minutes [min]
     # Choose type of state discretization (collocation or multiple-shooting)
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5
-    poly_degree = 1
+    poly_degree = 2
     # Collocation points: 'legendre' or 'radau'
     collocation = 'radau'
     # Number of finite elements per control interval
-    n_fin_elem = 1
+    n_fin_elem = 2
     # NLP Solver and linear solver
     nlp_solver = 'ipopt'
     qp_solver = 'qpoases'

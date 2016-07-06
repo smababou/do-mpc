@@ -41,7 +41,7 @@ def model():
     """
     E      = 29560.89
     R      = 8.314
-    c0     = 5.2*10**-5
+    c0     = 5.2*10**-5.0
     c1     = 16.4
     c2     = 2.3
     c3     = 1.563
@@ -78,8 +78,8 @@ def model():
     teta3 = teta1+teta2
 
     pur		= 1.0
-    hf 		= 1/0.704 #(inverse value)
-    Tamb 	= 280.382
+    hf 		= 1.0/0.704 #(inverse value)
+    Tamb 	      = 280.382
     """
     --------------------------------------------------------------------------
     template_model: define uncertain parameters, states and controls as symbols
@@ -121,55 +121,57 @@ def model():
 
     ## ----Empirical relations for the polymerization rate rP------
     f = mP/(mM + mP + mW)						#Auxiliary Variable
-    muy = c0*(exp1**(c1*f))*(10.0**(c2*(a0/TR-c3)))   #Batch Viscosity
+    muy = c0*exp(c1*f)*pow(10.0,c2*a0/TR - c2*c3)#c0*(exp1**(c1*f))*(10.0**(c2*(a0/TR-c3)))   #Batch Viscosity
 
-    kcon = k0*exp1**(-E/R/TR)*(k1*muy)**k2			#First-order Kinetic constant
+    kcon = k0*exp(-E/(R*TR))*pow(k1*muy,k2)#k0*exp1**(-E/R/TR)*(k1*muy)**k2			#First-order Kinetic constant
     rP = pur*kcon*mM
 
     ##-----Heat Reaction---------------------
     Qrea = deltaH*rP/MWM
 
     ##----Average Cooling Jacket Temperature----------
-    Tj = (Tjin + Tjout)/2
+    Tj = (Tjin + Tjout)/2.0
 
     ##----Heat Transfer Area A-----------------------
     A = (mM/proM + mP/proP + mW/proW)*P/B1 + B2
 
     ##----- Overall Heat Transfer coefficient-------
-    Twall = (TR + Tj)/2									     #Wall Temperature
-    muywall = c0*exp1**(c1*f)*10**(c2*(a0/Twall-c3))   #WAll Viscosity
+    Twall = (TR + Tj)/2.0									     #Wall Temperature
+    muywall = c0*exp1**(c1*f)*10.0**(c2*(a0/Twall-c3))   #WAll Viscosity
     h3 = d0*exp1**(d1*muywall)							 #Film heat Transfer Coefficient
-    Uover = 1/(1/h3+1/hf)
+    Uover = 1.0/(1.0/h3+1.0/hf)
 
     ##-------Kp------------------------------------
-    Kp = (0.5*NP.tanh(3*(VO-50))+0.5)*(0.15*30**(VO/50-2)*(Tsteam - Tjin)) + (1-(0.5*NP.tanh(3*(VO-50))+0.5))*(0.8*30**(-VO/50)*(Tinlet - Tjin))
-
-    Tj_lag2 = (Tjin_lag2+Tjout_lag2)/2
-    Twall_lag2 = (T_lag2+Tj_lag2)/2
+    #Kp = (0.5*NP.tanh(3.0*(VO-50.0))+0.5)*(0.15*30.0**(VO/50.0-2.0)*(Tsteam - Tjin)) + (1.0-(0.5*NP.tanh(3.0*(VO-50.0))+0.5))*(0.8*30**(-VO/50.0)*(Tinlet - Tjin))
+    Kp_1 = casadi.if_else(VO<50.0, 0.8*30.0**(-VO/50.0)*(Tinlet - Tjin), 0.15*30.0**(VO/50.0 -2.0)*(Tsteam - Tjin))
+    Kp = casadi.if_else(VO==50.0, 0, Kp_1)
+    #Kp =0.0# 0.15*pow(30.0,VO/50.0-2.0)*(Tsteam - Tjin)
+    Tj_lag2 = (Tjin_lag2+Tjout_lag2)/2.0
+    Twall_lag2 = (T_lag2+Tj_lag2)/2.0
     f_lag2 = mP_lag2/(mM_lag2+mP_lag2+mW)
-    muywall_lag2 = c0*exp1**(c1*f_lag2)*10**(c2*(a0/Twall_lag2-c3))
+    muywall_lag2 = c0*exp1**(c1*f_lag2)*10.0**(c2*(a0/Twall_lag2-c3))
     h_lag2 = d0*exp1**(d1*muywall_lag2)
-    U_lag2 = 1.0/(1.0/h_lag2+1/hf)
+    U_lag2 = 1.0/(1.0/h_lag2+1.0/hf)
 
 
     A_lag2 = (mM_lag2/proM + mP_lag2/proP + mW/proW)*P/B1 + B2
-    dTjout_lag2 = 1/(mC*CpC)*(mCdot*CpC*(Tjin_lag3-Tjout_lag2) + U_lag2*A_lag2*(T_lag2-Tj_lag2))
+    dTjout_lag2 = (1.0/(mC*CpC))*(mCdot*CpC*(Tjin_lag3-Tjout_lag2) + U_lag2*A_lag2*(T_lag2-Tj_lag2))
 
     # Define the differential equations
-    dmM = mMdot - rP
-    dmP = rP
-    dT     = 1/(mM*CpM + mP*CpP + mW*CpW)*(mMdot*CpM*(Tamb-TR) + Uover*A*(Tj-TR) + UAloss*(Tamb-TR) + Qrea)
-    dTjout = 1/(mC*CpC)*(mCdot*CpC*(Tjin_lag1-Tjout) + Uover*A*(TR-Tj))
+    dmM    = mMdot - rP
+    dmP    = rP
+    dT     = (1.0/(mM*CpM + mP*CpP + mW*CpW))*(mMdot*CpM*(Tamb-TR) - Uover*A*(TR-Tj) - UAloss*(TR-Tamb) + Qrea)
+    dTjout = (1.0/(mC*CpC))*(mCdot*CpC*(Tjin_lag1-Tjout) + Uover*A*(TR-Tj))
     dTjin  = dTjout_lag2 + (Tjout_lag2-Tjin)/Tau + Kp/Tau
 
     # Define the algebraic equations
-    dmM_lag2 = mM_lag2 -(mM - teta2*dmM)
-    dmP_lag2 = mP_lag2 - (mP - teta2*dmP)
-    dT_lag2  = T_lag2 - (TR - teta2*dT)
-    dTjout_lag2 = Tjout_lag2 - (Tjout - teta2 * dTjout)
-    dTjin_lag1 = Tjin_lag1 - (Tjin - teta1 * dTjin)
-    dTjin_lag2 = Tjin_lag2 - (Tjin - teta2*dTjin)
-    dTjin_lag3 = Tjin_lag3 - (Tjin - teta3*dTjin)
+    dzmM_lag2 = mM_lag2 -(mM - teta2*dmM)
+    dzmP_lag2 = mP_lag2 - (mP - teta2*dmP)
+    dzT_lag2  = T_lag2 - (TR - teta2*dT)
+    dzTjout_lag2 = Tjout_lag2 - (Tjout - teta2 * dTjout)
+    dzTjin_lag1 = Tjin_lag1 - (Tjin - teta1 * dTjin)
+    dzTjin_lag2 = Tjin_lag2 - (Tjin - teta2*dTjin)
+    dzTjin_lag3 = Tjin_lag3 - (Tjin - teta3*dTjin)
 
     # Concatenate differential states, algebraic states, control inputs and right-hand-sides
 
@@ -177,7 +179,7 @@ def model():
 
     #_z = []
     _z = vertcat(mM_lag2,mP_lag2,T_lag2,Tjout_lag2,Tjin_lag1,Tjin_lag2,Tjin_lag3)
-
+    #_z = vertcat(T_lag2,Tjout_lag2,Tjin_lag1,Tjin_lag2,Tjin_lag3)
     _u = vertcat(VO,mMdot)
 
     _p = vertcat(pur)
@@ -185,8 +187,8 @@ def model():
     _xdot = vertcat(dmM,dmP,dT,dTjout,dTjin)
 
     #_zdot = vertcat([])
-    _zdot = vertcat(dmM_lag2,dmP_lag2,dT_lag2,dTjout_lag2,dTjin_lag1,dTjin_lag2,dTjin_lag3)
-
+    _zdot = vertcat(dzmM_lag2,dzmP_lag2,dzT_lag2,dzTjout_lag2,dzTjin_lag1,dzTjin_lag2,dzTjin_lag3)
+    #_zdot = vertcat(dT_lag2,dTjout_lag2,dTjin_lag1,dTjin_lag2,dTjin_lag3)
     """
     --------------------------------------------------------------------------
     template_model: initial condition and constraints
@@ -195,7 +197,7 @@ def model():
     # Initial conditions for Differential States
     mM_init 	= 0.0
     mP_init 	= 11.227
-    T_init 		= 305.382
+    T_init 		= 355.382
     Tjout_init 	= 305.382
     Tjin_init  	= 305.382
 
@@ -212,14 +214,14 @@ def model():
     x0 = NP.array([mM_init,mP_init,T_init,Tjout_init,Tjin_init])
     z0 = NP.array([mM_lag2_init, mP_lag2_init, T_lag2_init, Tjout_lag2_init, Tjin_lag1_init, Tjin_lag2_init, Tjin_lag3_init])
     # Bounds on the states. Use "inf" for unconstrained states
-    mM_lb    = 0.0;                             mM_ub    = inf;
-    mP_lb    = 0.0;					  	        mP_ub    = inf
-    T_lb     = 0.0;					            T_ub     = 355.382+0.6
+    mM_lb    = 0.0;                                 mM_ub    = inf;
+    mP_lb    = 0.0;					  	 mP_ub    = inf
+    T_lb     = 0.0;					      T_ub     = 355.382+0.6
     Tjout_lb = 273.15+5.0;			            Tjout_ub = 273.15+95.0
-    Tjin_lb  = 0.0;						        Tjin_ub  = 273.15+95.0
+    Tjin_lb  = 0.0;						 Tjin_ub  = 273.15+95.0
 
     mM_lag2_lb	  = 0.0;						mM_lag2_ub    = inf
-    mP_lag2_lb	  = 0.0;					    mP_lag2_ub    = inf
+    mP_lag2_lb	  = 0.0;					     mP_lag2_ub    = inf
     T_lag2_lb 	  = 0.0;						T_lag2_ub     = inf
     Tjout_lag2_lb = 0.0;						Tjout_lag2_ub = inf
     Tjin_lag1_lb  = 0.0;						Tjin_lag1_ub  = inf
@@ -231,8 +233,8 @@ def model():
     z_lb = NP.array([mM_lag2_lb, mP_lag2_lb, T_lag2_lb, Tjout_lag2_lb, Tjin_lag1_lb, Tjin_lag2_lb, Tjin_lag3_lb])
     z_ub = NP.array([mM_lag2_ub, mP_lag2_ub, T_lag2_ub, Tjout_lag2_ub, Tjin_lag1_ub, Tjin_lag2_ub, Tjin_lag3_ub])
     # Bounds on the control inputs. Use "inf" for unconstrained inputs
-    VO_lb    = 0.0;		                        VO_ub = 100.00 ;		         VO_init = 100.0	;
-    mMdot_lb = 0.0;		                        mMdot_ub = 0.0;	                 mMdot_init = 0.005;
+    VO_lb    = 0.001;		                        VO_ub = 100.00 ;		         VO_init = 100.0	;
+    mMdot_lb = 0.00;		                        mMdot_ub = 4.0;	                 mMdot_init = 0.0075;
 
     u_lb=NP.array([VO_lb,mMdot_lb])
     u_ub=NP.array([VO_ub,mMdot_ub])
@@ -270,13 +272,13 @@ def model():
     """
     # Define the cost function
     # Lagrange term
-    lterm =  0
-    #lterm =  - C_b
+    #lterm =  0
+    lterm =  - mP #+ (TR-355.0)**2
     # Mayer term
     mterm =  0
 
     # Penalty term for the control movements
-    rterm = NP.array([0.0, 0.0])
+    rterm = 1.0*NP.array([1.0, 1.0])
 
 
 

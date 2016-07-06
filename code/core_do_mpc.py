@@ -80,11 +80,11 @@ class model:
         self.u = param_dict["u"]
         self.p = param_dict["p"]
         self.z = param_dict["z"]
-        odes = param_dict["rhs"]        
+        ode = param_dict["rhs"]        
         aes  = param_dict["aes"]
-        self.odes = param_dict["rhs"]
+        self.ode = param_dict["rhs"]
         self.aes = param_dict["aes"]
-        self.rhs = vertcat(odes,aes)#param_dict["rhs"] # Right hand side of the DAE equations
+        self.rhs = vertcat(ode,aes)#param_dict["rhs"] # Right hand side of the DAE equations
          # Assign the main variables that describe the OCP
         self.ocp = ocp(param_dict)
 
@@ -104,7 +104,7 @@ class simulator:
         #pdb.set_trace()
         rhs_unscaled = substitute(model_simulator.rhs, model_simulator.x, model_simulator.x * model_simulator.ocp.x_scaling)/model_simulator.ocp.x_scaling
         rhs_unscaled = substitute(rhs_unscaled, model_simulator.u, model_simulator.u * model_simulator.ocp.u_scaling)
-        dae = {'x':model_simulator.x, 'p':vertcat(model_simulator.u,model_simulator.p), 'ode':rhs_unscaled}
+        dae = {'x':model_simulator.x[0:5], 'z':model_simulator.z, 'p':vertcat(model_simulator.u,model_simulator.p), 'ode':model_simulator.ode, 'alg': model_simulator.aes}
         opts = param_dict["integrator_opts"]
         #NOTE: Check the scaling factors (appear to be fine)
         simulator_do_mpc = integrator("simulator", param_dict["integration_tool"], dae,  opts)
@@ -244,8 +244,8 @@ class configuration:
         u_mpc = self.optimizer.u_mpc
         # Use the real parameters
         p_real = self.simulator.p_real_now(self.simulator.t0_sim)
-        result  = self.simulator.simulator(x0 = self.simulator.x0_sim, p = vertcat(u_mpc,p_real))
-        self.simulator.xf_sim = NP.squeeze(result['xf'])
+        result  = self.simulator.simulator(x0 = self.simulator.x0_sim[0:5], z0 =self.simulator.x0_sim[5:12], p = vertcat(u_mpc,p_real))       
+        self.simulator.xf_sim = NP.squeeze(vertcat(NP.squeeze(result['xf']),NP.squeeze(result['zf'])))
         # Update the initial condition for the next iteration
         self.simulator.x0_sim = self.simulator.xf_sim
         # Update the mpc iteration index and the time

@@ -94,8 +94,11 @@ def setup_nlp(model, optimizer):
     xdot = substitute(xdot,x,x*x_scaling)/x_scaling
     for i in (u_ub,u_lb,u_init): i /= u_scaling
     xdot = substitute(xdot,u,u*u_scaling)
-    ffcn = Function('ffcn',[x,up],[xdot])
-    
+    if nz == 0:
+        ffcn = Function('ffcn',[x,up],[xdot])
+    else:
+        ffcn = Function('ffcn',[x[0:nx-nz],z,up],[xdot[0:nx-nz],xdot[nx-nz:nx]])
+            
     # Constraints, possibly soft
     # Epsilon for the soft constraints
     cons = substitute(cons,x,x*x_scaling)
@@ -291,8 +294,19 @@ def setup_nlp(model, optimizer):
             xp_ij += C[r,j]*ik_split[i,r]
 
           # Add collocation equations to the NLP
-	  [f_ij] = ffcn.call([ik_split[i,j],vertcat(uk,pk)])
-          gk.append(h*f_ij - xp_ij)
+          if nz == 0:
+              # The ODE case: a simple function call is performed
+              [f_ij] = ffcn.call([ik_split[i,j],vertcat(uk,pk)])
+              gk.append(h*f_ij - xp_ij)
+          else:
+              # The DAE case: two calls are made and the constraint vector is updated correspondingly 
+              ik_curr = ik_split[i,j];
+              ik_d = ik_curr[0:nx-nz];
+              ik_a = ik_curr[nx-nz:nx];
+              [f_ij_curr,g_ij_curr] = ffcn.call([ik_d,ik_a,vertcat(uk,pk)])#[DAE_ODE]
+              #[g_ij_curr] = ffcn.call([ik_d,ik_a,vertcat(uk,pk)])#[DAE_ALG]
+              gk.append(h*f_ij_curr - xp_ij[0:nx-nz])
+              gk.append(g_ij_curr)
           lbgk.append(NP.zeros(nx)) # equality constraints
           ubgk.append(NP.zeros(nx)) # equality constraints
 
