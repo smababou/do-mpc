@@ -101,10 +101,15 @@ class simulator:
         required_dimension = 9
         if not (len(param_dict) == required_dimension): raise Exception("Simulator information is incomplete. The number of elements in the dictionary is not correct")
         # Unscale the states on the rhs
-        #pdb.set_trace()
         rhs_unscaled = substitute(model_simulator.rhs, model_simulator.x, model_simulator.x * model_simulator.ocp.x_scaling)/model_simulator.ocp.x_scaling
         rhs_unscaled = substitute(rhs_unscaled, model_simulator.u, model_simulator.u * model_simulator.ocp.u_scaling)
-        dae = {'x':model_simulator.x[0:5], 'z':model_simulator.z, 'p':vertcat(model_simulator.u,model_simulator.p), 'ode':model_simulator.ode, 'alg': model_simulator.aes}
+        # Determine sizes of the state vectors
+        nx = model_simulator.x.size(1)
+        nz = model_simulator.z.size(1)
+        if nz == 0:
+            dae = {'x':model_simulator.x, 'p':vertcat(model_simulator.u,model_simulator.p), 'ode':model_simulator.ode}
+        else:
+            dae = {'x':model_simulator.x[0:nx-nz], 'z':model_simulator.z, 'p':vertcat(model_simulator.u,model_simulator.p), 'ode':model_simulator.ode, 'alg': model_simulator.aes}
         opts = param_dict["integrator_opts"]
         #NOTE: Check the scaling factors (appear to be fine)
         simulator_do_mpc = integrator("simulator", param_dict["integration_tool"], dae,  opts)
@@ -244,7 +249,10 @@ class configuration:
         u_mpc = self.optimizer.u_mpc
         # Use the real parameters
         p_real = self.simulator.p_real_now(self.simulator.t0_sim)
-        result  = self.simulator.simulator(x0 = self.simulator.x0_sim[0:5], z0 =self.simulator.x0_sim[5:12], p = vertcat(u_mpc,p_real))       
+        # Get sizes of the variables
+        nx = self.model.x.size(1)
+        nz = self.model.z.size(1)
+        result  = self.simulator.simulator(x0 = self.simulator.x0_sim[0:nx-nz], z0 =self.simulator.x0_sim[nx-nz:nx], p = vertcat(u_mpc,p_real))       
         self.simulator.xf_sim = NP.squeeze(vertcat(NP.squeeze(result['xf']),NP.squeeze(result['zf'])))
         # Update the initial condition for the next iteration
         self.simulator.x0_sim = self.simulator.xf_sim
