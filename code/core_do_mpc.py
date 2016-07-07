@@ -76,15 +76,20 @@ class model:
         # Assign the main variables describing the model equations
         x = param_dict["x"]
         z = param_dict["z"]
-        self.x = vertcat(x,z)#param_dict["x"]
+        ode = param_dict["rhs"]        
+        aes  = param_dict["aes"]
+        # Right hand side of the DAE equations
+        if z.size(1) == 0:
+            self.x = param_dict["x"]
+            self.rhs =  param_dict["rhs"]
+        else:
+            self.x = vertcat(x,z)
+            self.rhs = vertcat(ode,aes)
         self.u = param_dict["u"]
         self.p = param_dict["p"]
         self.z = param_dict["z"]
-        ode = param_dict["rhs"]        
-        aes  = param_dict["aes"]
         self.ode = param_dict["rhs"]
-        self.aes = param_dict["aes"]
-        self.rhs = vertcat(ode,aes)#param_dict["rhs"] # Right hand side of the DAE equations
+        self.aes = param_dict["aes"]       
          # Assign the main variables that describe the OCP
         self.ocp = ocp(param_dict)
 
