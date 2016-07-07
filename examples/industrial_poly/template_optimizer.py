@@ -50,7 +50,7 @@ def optimizer(model):
     # Collocation points: 'legendre' or 'radau'
     collocation = 'radau'
     # Number of finite elements per control interval
-    n_fin_elem = 1
+    n_fin_elem = 2
     # NLP Solver and linear solver
     nlp_solver = 'ipopt'
     qp_solver = 'qpoases'

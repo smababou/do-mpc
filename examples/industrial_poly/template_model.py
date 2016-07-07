@@ -230,7 +230,7 @@ def model():
     # Lagrange term
     lterm =  - m_P
     # Mayer term
-    mterm =  - m_P
+    mterm =  0#- m_P
     # Penalty term for the control movements
     rterm = 0.04 * NP.array([.05,.1,.05])
 
