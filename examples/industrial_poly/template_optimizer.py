@@ -42,8 +42,9 @@ def optimizer(model):
     # Sampling time
     t_step = 50.0/3600.0
     # Simulation time
-    t_end = 2.0
+    t_end = 5.0
     # Choose type of state discretization (collocation, multiple-shooting or discrete-time)
+    # NOTE: this information should be included in the model
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5
     poly_degree = 2
@@ -59,7 +60,7 @@ def optimizer(model):
     # such as the hsl linear solver MA27, which can be downloaded as a precompiled
     # library and can be used by IPOPT on run time
 
-    linear_solver = 'mumps'
+    linear_solver = 'ma27'
 
     # GENERATE C CODE shared libraries NOTE: Not currently supported
     generate_code = 0

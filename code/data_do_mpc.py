@@ -27,6 +27,7 @@ import numpy as NP
 import core_do_mpc
 from matplotlib.ticker import MaxNLocator
 import scipy.io
+import pdb
 
 
 class mpc_data:
@@ -36,6 +37,8 @@ class mpc_data:
         nx = configuration.model.x.size(1)
         nu = configuration.model.u.size(1)
         np = configuration.model.p.size(1)
+        ny = configuration.model.y.size(1)
+        n_mhe = configuration.observer.n_horizon
         if NP.size(configuration.model.z) > 0: # If DAE
             nz = configuration.model.z.size(1)
         else: # Model is ODE
@@ -55,6 +58,12 @@ class mpc_data:
         self.mpc_states[0,:] = configuration.model.ocp.x0 / configuration.model.ocp.x_scaling
         self.mpc_control[0,:] = configuration.model.ocp.u0 / configuration.model.ocp.u_scaling
         self.mpc_time[0] = 0
+        # Store data for MHE
+        self.mhe_est_states = NP.resize(NP.array([]),(0 ,nx))
+        self.mhe_est_param = NP.resize(NP.array([]),(0 ,np))
+        self.mhe_meas_val = NP.resize(NP.array([]),(0 ,ny))
+        self.mhe_y_meas =  NP.resize(NP.array([]),(ny ,n_mhe))
+        self.mhe_u_meas = NP.resize(NP.array([]),(nu ,n_mhe))
 
 class opt_result:
     """ A class for the definition of the result of an optimization problem containing optimal solution, optimal cost and value of the nonlinear constraints"""
@@ -87,6 +96,8 @@ def plot_mpc(configuration):
     """ This function plots the states and controls chosen in the variables plot_states and plot_control until a certain index (index_mpc) """
     mpc_data = configuration.mpc_data
     mpc_states = mpc_data.mpc_states
+    mpc_states_est = mpc_data.mhe_est_states
+    mpc_meas_val = mpc_data.mhe_meas_val
     mpc_control = mpc_data.mpc_control
     mpc_time = mpc_data.mpc_time
     index_mpc = configuration.simulator.mpc_iteration
@@ -102,12 +113,15 @@ def plot_mpc(configuration):
     total_subplots = len(plot_states) + len(plot_control)
     # First plot the states
     for index in range(len(plot_states)):
-    	plot = plt.subplot(total_subplots, 1, index + 1)
-    	plt.plot(mpc_time[0:index_mpc], mpc_states[0:index_mpc,plot_states[index]] * x_scaling[plot_states[index]])
-    	plt.ylabel(str(x[plot_states[index]]))
-    	plt.xlabel("Time")
-    	plt.grid()
-    	plot.yaxis.set_major_locator(MaxNLocator(4))
+        plot = plt.subplot(total_subplots, 1, index + 1)
+        plt.plot(mpc_time[0:index_mpc], mpc_states[0:index_mpc,plot_states[index]] * x_scaling[plot_states[index]])
+        plt.hold(True)
+        plt.plot(mpc_time[1:index_mpc], mpc_states_est[0:index_mpc-1,plot_states[index]] * x_scaling[plot_states[index]])
+        plt.plot(mpc_time[1:index_mpc], mpc_meas_val[0:index_mpc-1,plot_states[index]] * x_scaling[plot_states[index]])
+        plt.ylabel(str(x[plot_states[index]]))
+        plt.xlabel("Time")
+        plt.grid()
+        plot.yaxis.set_major_locator(MaxNLocator(4))
 
     # Plot the control inputs
     for index in range(len(plot_control)):

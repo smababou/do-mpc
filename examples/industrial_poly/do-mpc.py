@@ -35,7 +35,7 @@ from casadi import *
 import core_do_mpc
 # Import do-mpc plotting and data managament functions
 import data_do_mpc
-
+import pdb
 """
 -----------------------------------------------
 do-mpc: Definition of the do-mpc configuration
@@ -44,24 +44,22 @@ do-mpc: Definition of the do-mpc configuration
 
 # Import the user defined modules
 import template_model
+import template_model_observer
 import template_optimizer
 import template_observer
 import template_simulator
 
 # Create the objects for each module
 model_1 = template_model.model()
+model_observer = template_model_observer.model()
 # Create an optimizer object based on the template and a model
 optimizer_1 = template_optimizer.optimizer(model_1)
 # Create an observer object based on the template and a model
-observer_1 = template_observer.observer(model_1)
+observer_1 = template_observer.observer(model_observer)
 # Create a simulator object based on the template and a model
 simulator_1 = template_simulator.simulator(model_1)
 # Create a configuration
 configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
-
-# Set up the solvers
-configuration_1.setup_solver()
-
 
 """
 ----------------------------
@@ -69,7 +67,8 @@ do-mpc: MPC loop
 ----------------------------
 """
 # Do not stop until a predefined amount of polymer has been produced
-while (configuration_1.simulator.x0_sim[2] * configuration_1.model.ocp.x_scaling[2] < 20681):
+#while (configuration_1.simulator.x0_sim[2] * configuration_1.model.ocp.x_scaling[2] < 20681):
+while (configuration_1.simulator.t0_sim <= 2.0):
 
     """
     ----------------------------
