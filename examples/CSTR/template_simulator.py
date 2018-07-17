@@ -58,7 +58,7 @@ def simulator(model):
     """
 
     # Choose the indices of the states to plot
-    plot_states = [0,1,2]
+    plot_states = [0,1,2,3]
     # Choose the indices of the controls to plot
     plot_control = [0, 1]
     # Plot animation (False or True)
