@@ -68,7 +68,7 @@ do-mpc: MPC loop
 """
 # Do not stop until a predefined amount of polymer has been produced
 #while (configuration_1.simulator.x0_sim[2] * configuration_1.model.ocp.x_scaling[2] < 20681):
-while (configuration_1.simulator.t0_sim <= 2.0):
+while (configuration_1.simulator.t0_sim <= 1.0):
 
     """
     ----------------------------
@@ -119,10 +119,9 @@ do-mpc: Plot the closed-loop results
 ------------------------------------------------------
 """
 
-data_do_mpc.plot_mpc(configuration_1)
-
 # Export to matlab if wanted
 data_do_mpc.export_to_matlab(configuration_1)
 
+data_do_mpc.plot_mpc(configuration_1)
 
 raw_input("Press Enter to exit do-mpc...")
