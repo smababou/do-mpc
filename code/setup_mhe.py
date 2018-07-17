@@ -56,6 +56,7 @@ def setup_mhe(model, observer):
     u_ub = model.ocp.u_ub
     x_scaling = model.ocp.x_scaling
     u_scaling = model.ocp.u_scaling
+    y_scaling = model.ocp.y_scaling
     cons = model.ocp.cons
     cons_ub = model.ocp.cons_ub
     cons_terminal = model.ocp.cons_terminal
@@ -81,6 +82,7 @@ def setup_mhe(model, observer):
     u_est_past = SX.sym("u_est_past",u.shape)
     p_est_past = SX.sym("p_est_past",p.shape)
     y_meas = SX.sym("y_meas",y.shape)
+    alpha = SX.sym("alpha")
 
     # build parts of objective function
     P_states = observer.P_states
@@ -131,17 +133,18 @@ def setup_mhe(model, observer):
     cons_terminal = substitute(cons_terminal, u, u * u_scaling)
     cfcn_terminal = Function('cfcn', [x, u, p], [cons_terminal])
     # Mayer term of the cost functions
-    mterm = J_states
+    mterm = alpha*J_states
     mterm = substitute(mterm, x, x * x_scaling)
     mterm = substitute(mterm, u, u * u_scaling)
-    mfcn = Function('mfcn', [x, x_est_past, p, tv_p], [mterm])
+    mfcn = Function('mfcn', [x, x_est_past, p, tv_p, alpha], [mterm])
     # Lagrange term of the cost function
     # lterm = J_states + J_inputs + J_meas + J_param
-    lterm = J_meas
+    lterm =alpha*J_meas + alpha*J_inputs
     lterm = substitute(lterm, x, x * x_scaling)
-    lterm = substitute(lterm, y_meas, y_meas * x_scaling)
+    lterm = substitute(lterm, y_meas, y_meas * y_scaling)
     lterm = substitute(lterm, u, u * u_scaling)
-    lagrange_fcn = Function('lagrange_fcn', [y, y_meas, p, tv_p], [lterm])
+    lagrange_fcn = Function('lagrange_fcn', [y, y_meas, u, u_est_past,
+                                             p, tv_p, alpha], [lterm])
     # Penalty term for the control inputs
     # u_prev = SX.sym("u_prev", nu)
     # du = u - u_prev
@@ -452,15 +455,15 @@ def setup_mhe(model, observer):
     parameters_setup_nlp = struct_symMX(
         [entry("uk_prev", shape=(nu)), entry("TV_P", shape=(ntv_p, nk)),
          entry("Y_MEAS", shape=(ny,nk)), entry("X_EST", shape=(nx,1)),
-         entry("U_MEAS", shape=(nu,nk)), entry("P_EST", shape=(np,1))]
-         # entry("alpha", shape=(nk))])
+         entry("U_MEAS", shape=(nu,nk)), entry("P_EST", shape=(np,1)),
+         entry("ALPHA", shape=(nk))])
     TV_P = parameters_setup_nlp['TV_P']
     uk_prev = parameters_setup_nlp['uk_prev']
     Y_MEAS = parameters_setup_nlp['Y_MEAS']
     X_EST = parameters_setup_nlp['X_EST']
     U_MEAS = parameters_setup_nlp['U_MEAS']
     P_EST = parameters_setup_nlp['P_EST']
-    # alpha = parameters_setup_nlp['alpha']
+    ALPHA = parameters_setup_nlp['ALPHA']
 
     # The offset variables contain the position of the states and controls in
     # the vector of opt. variables
@@ -601,9 +604,10 @@ def setup_mhe(model, observer):
                     ubg.append(cons_terminal_ub)
                 # Add contribution to the cost
                 if k == 0:
-                    [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k]])
+                    [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k], ALPHA[k+1]])
                 Y_ks = meas_fcn(X_ks, U_ks, P_ksb, TV_P[:, k])
-                [J_ksb] = lagrange_fcn.call([Y_ks, Y_MEAS[:,k], P_ksb, TV_P[:, k]])
+                [J_ksb] = lagrange_fcn.call([Y_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k],
+                                             P_ksb, TV_P[:, k], ALPHA[k]])
                 J += J_ksb #omega[k] * J_ksb
 
                 # Add contribution to the cost of the soft constraints penalty

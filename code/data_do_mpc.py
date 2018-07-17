@@ -62,6 +62,7 @@ class mpc_data:
         self.mhe_est_states = NP.resize(NP.array([]),(0 ,nx))
         self.mhe_est_param = NP.resize(NP.array([]),(0 ,np))
         self.mhe_meas_val = NP.resize(NP.array([]),(0 ,ny))
+        self.mhe_u_meas_val = NP.resize(NP.array([]),(0 ,nu))
         self.mhe_y_meas =  NP.resize(NP.array([]),(ny ,n_mhe))
         self.mhe_u_meas = NP.resize(NP.array([]),(nu ,n_mhe))
 
@@ -98,6 +99,7 @@ def plot_mpc(configuration):
     mpc_states = mpc_data.mpc_states
     mpc_states_est = mpc_data.mhe_est_states
     mpc_meas_val = mpc_data.mhe_meas_val
+    mpc_u_meas_val = mpc_data.mhe_u_meas_val
     mpc_control = mpc_data.mpc_control
     mpc_time = mpc_data.mpc_time
     index_mpc = configuration.simulator.mpc_iteration
@@ -107,6 +109,7 @@ def plot_mpc(configuration):
     x_scaling = configuration.model.ocp.x_scaling
     u = configuration.model.u
     u_scaling = configuration.model.ocp.u_scaling
+    y_scaling = configuration.observer.observer_model.ocp.y_scaling
 
     plt.ion()
     fig = plt.figure(1)
@@ -117,7 +120,7 @@ def plot_mpc(configuration):
         plt.plot(mpc_time[0:index_mpc], mpc_states[0:index_mpc,plot_states[index]] * x_scaling[plot_states[index]])
         plt.hold(True)
         plt.plot(mpc_time[1:index_mpc], mpc_states_est[0:index_mpc-1,plot_states[index]] * x_scaling[plot_states[index]])
-        plt.plot(mpc_time[1:index_mpc], mpc_meas_val[0:index_mpc-1,plot_states[index]] * x_scaling[plot_states[index]])
+        # plt.plot(mpc_time[1:index_mpc], mpc_meas_val[0:index_mpc-1,plot_states[index]] * y_scaling[plot_states[index]])
         plt.ylabel(str(x[plot_states[index]]))
         plt.xlabel("Time")
         plt.grid()
@@ -127,6 +130,8 @@ def plot_mpc(configuration):
     for index in range(len(plot_control)):
     	plot = plt.subplot(total_subplots, 1, len(plot_states) + index + 1)
     	plt.plot(mpc_time[0:index_mpc], mpc_control[0:index_mpc,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
+        plt.hold(True)
+        plt.plot(mpc_time[1:index_mpc], mpc_u_meas_val[0:index_mpc-1,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
     	plt.ylabel(str(u[plot_control[index]]))
     	plt.xlabel("Time")
     	plt.grid()

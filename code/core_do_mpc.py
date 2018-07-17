@@ -199,6 +199,8 @@ class observer:
         self.noise = param_dict["noise"]
         self.mag = param_dict["mag"]
 
+        self.observed_states = NP.zeros(model_observer.x.size(1))
+
         # self.arrival_cost = param_dict["arrival_cost"]
         # self.uncertainty_values = param_dict["uncertainty_values"]
         self.meas_fcn = param_dict["meas_fcn"]
@@ -306,7 +308,8 @@ class configuration:
         nk = self.observer.n_horizon
         parameters_setup_mhe = struct_symMX([entry("uk_prev",shape=(nu)), entry("TV_P",shape=(ntv_p,nk)),
                                              entry("Y_MEAS",shape=(ny,nk)), entry("X_EST",shape=(nx,1)),
-                                             entry("U_MEAS", shape=(nu,nk)), entry("P_EST", shape=(np,1))])
+                                             entry("U_MEAS", shape=(nu,nk)), entry("P_EST", shape=(np,1)),
+                                             entry("ALPHA", shape=(nk))])
         param = parameters_setup_mhe(0)
         # First value of the nlp parameters
         param["uk_prev"] = self.model.ocp.u0
@@ -315,6 +318,7 @@ class configuration:
         param["X_EST"] = NP.zeros([nx,1])
         # param["P_EST"] = 3
         param["U_MEAS"] = NP.zeros([nu,nk])
+        arg["ALPHA"] = NP.zeros(nk)
         arg["p"] = param
         # Add new attributes to the observer class
         self.observer.solver = solver
@@ -339,13 +343,15 @@ class configuration:
         X_offset = self.observer.nlp_dict_out['X_offset']
         nx = self.model.x.size(1)
         arg = self.observer.arg
-        if self.simulator.mpc_iteration > self.observer.n_horizon+1:
-            result = self.observer.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
-            self.observer.observed_states = NP.squeeze(result['x'][X_offset[-1][0]:X_offset[-1][0]+nx])
-            self.observer.optimal_solution = result['x']
+        # if self.simulator.mpc_iteration > self.observer.n_horizon+1:
+        # pdb.set_trace()
+        result = self.observer.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
+        self.observer.observed_states = NP.squeeze(result['x'][X_offset[-1][0]:X_offset[-1][0]+nx])
+        # self.observer.observed_states = self.simulator.xf_sim
+        self.observer.optimal_solution = result['x']
             # pdb.set_trace()
-        else:
-            self.observer.observed_states = self.simulator.xf_sim
+        # else:
+        #     self.observer.observed_states = self.simulator.xf_sim
         # if self.simulator.mpc_iteration > 20:
         #     pdb.set_trace()
 
@@ -357,7 +363,7 @@ class configuration:
         y_meas = NP.reshape(self.observer.measurement,(-1,1))
         param["Y_MEAS"] = NP.repeat(y_meas,nk,axis=1)
         self.mpc_data.mhe_y_meas = NP.repeat(y_meas,nk,axis=1)
-        param["X_EST"] = NP.reshape(self.simulator.xf_sim,(-1,1)) * NP.random.normal(NP.ones([nx,1]),NP.ones([nx,1])*0.003)
+        param["X_EST"] = NP.reshape(self.simulator.xf_sim,(-1,1)) * NP.random.normal(NP.ones([nx,1]),NP.ones([nx,1])*0.00)
         u_meas = NP.reshape(self.optimizer.u_mpc,(-1,1))
         param["U_MEAS"] = NP.repeat(u_meas,nk,axis=1)
         self.mpc_data.mhe_u_meas = NP.repeat(u_meas,nk,axis=1)
@@ -396,7 +402,7 @@ class configuration:
         data = self.mpc_data
         nu = self.model.u.size(1)
         nx = self.model.x.size(1)
-        ny = self.model.y.size(1)
+        ny = self.observer.observer_model.y.size(1)
         np = self.model.p.size(1)
         ntv_p = self.model.tv_p.size(1)
         nk = self.optimizer.n_horizon
@@ -419,13 +425,26 @@ class configuration:
 
         parameters_setup_mhe = struct_symMX([entry("uk_prev",shape=(nu)), entry("TV_P",shape=(ntv_p,nk_mhe)),
                                              entry("Y_MEAS",shape=(ny,nk_mhe)), entry("X_EST",shape=(nx,1)),
-                                             entry("U_MEAS", shape=(nu,nk_mhe)), entry("P_EST", shape=(np,1))])
+                                             entry("U_MEAS", shape=(nu,nk_mhe)), entry("P_EST", shape=(np,1)),
+                                             entry("ALPHA", shape=(nk_mhe))])
         param_mhe = parameters_setup_mhe(0)
         param_mhe["uk_prev"] = self.optimizer.u_mpc
         # param["TV_P"] = self.optimizer.tv_p_values[step_index]
+        param_mhe["X_EST"] = self.observer.observed_states
         param_mhe["Y_MEAS"] = self.mpc_data.mhe_y_meas
         param_mhe["U_MEAS"] = self.mpc_data.mhe_u_meas
+        alpha = self.observer.arg["p"]["ALPHA"]
+        alpha = NP.roll(alpha,-1,axis=0)
+        alpha[-1] = 1
+        param_mhe["ALPHA"] = NP.squeeze(alpha)
         self.observer.arg['p'] = param_mhe
+
+        # # include all inputs as constraints
+        # U_offset = self.observer.nlp_dict_out['U_offset']
+        # u_meas = self.mpc_data.mhe_u_meas
+        # for i in range(nk_mhe):
+        #     self.observer.arg['lbx'][U_offset[i,0]:U_offset[i,0]+nu] = NP.squeeze(u_meas[:,i])
+        #     self.observer.arg['ubx'][U_offset[i,0]:U_offset[i,0]+nu] = NP.squeeze(u_meas[:,i])
 
     def prepare_next_iter(self):
         observed_states = self.observer.observed_states
@@ -451,14 +470,8 @@ class configuration:
         self.optimizer.arg['p'] = param
 
         # observer
-        U_offset = self.observer.nlp_dict_out['U_offset']
-        nk_mhe = self.observer.n_horizon
-        u_meas = self.mpc_data.mhe_u_meas
-        for i in range(nk_mhe):
-            self.observer.arg['lbx'][U_offset[i,0]:U_offset[i,0]+nu] = NP.squeeze(u_meas[:,i])
-            self.observer.arg['ubx'][U_offset[i,0]:U_offset[i,0]+nu] = NP.squeeze(u_meas[:,i])
-        if self.simulator.mpc_iteration > self.observer.n_horizon + 1:
-            self.observer.arg["x0"] = self.observer.optimal_solution
+        # if self.simulator.mpc_iteration > self.observer.n_horizon + 1:
+        self.observer.arg["x0"] = self.observer.optimal_solution
         # parameters_setup_mhe = struct_symMX([entry("uk_prev",shape=(nu)), entry("TV_P",shape=(ntv_p,nk_mhe)),
         #                                      entry("Y_MEAS",shape=(ny,nk_mhe+1)), entry("X_EST",shape=(nx,1)),
         #                                      entry("U_MEAS", shape=(nu,nk_mhe)), entry("P_EST", shape=(np,1))])
@@ -493,16 +506,19 @@ class configuration:
         # data.mhe_est_states = NP.roll(data.mhe_est_states,-1,axis=0)
         # data.mhe_est_states = NP.append(data.mhe_est_states,[self.observer.observed_states], axis = 0)
         X_offset = self.observer.nlp_dict_out['X_offset']
+        U_offset = self.observer.nlp_dict_out['U_offset']
         nx = self.model.x.size(1)
-        if self.simulator.mpc_iteration > self.observer.n_horizon + 1:
-            x_val = NP.squeeze(self.observer.optimal_solution[X_offset[-1][0]:X_offset[-1][0]+nx])
-        else:
-            x_val = NP.zeros(10)
+        nu = self.model.u.size(1)
+        # if self.simulator.mpc_iteration > self.observer.n_horizon + 1:
+        x_val = NP.squeeze(self.observer.optimal_solution[X_offset[-1][0]:X_offset[-1][0]+nx])
+        u_val = NP.squeeze(self.observer.optimal_solution[U_offset[-1][0]:U_offset[-1][0]+nu])
+        # else:
+            # x_val = NP.zeros(10)
         data.mhe_est_states = NP.append(data.mhe_est_states,[x_val], axis = 0)
         data.mhe_meas_val = NP.append(data.mhe_meas_val,[self.observer.measurement], axis = 0)
         # data.mhe_y_meas = NP.roll(data.mhe_y_meas,-1,axis=1)
         # data.mhe_y_meas[:,-1] = self.observer.measurement
-        # data.mhe_u_meas = NP.roll(data.mhe_u_meas,-1,axis=1)
+        data.mhe_u_meas_val = NP.append(data.mhe_u_meas_val,[u_val], axis = 0)
         # data.mhe_u_meas[:,-1] = self.optimizer.u_mpc
             # data.mhe_est_param = NP.roll(data.mhe_est_param,-1,axis=0)
             # data.mhe_est_param[-1,:] = self.observer.observed_param
