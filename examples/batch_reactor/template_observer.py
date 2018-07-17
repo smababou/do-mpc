@@ -55,6 +55,8 @@ def observer(model):
     """
     # Choose the simulator time step
     t_step_observer = 50.0/3600.0
+    # Simulation time
+    t_end = 150.0
     # Choose options for the integrator
     opts = {"abstol":1e-10,"reltol":1e-10, 'tf':t_step_observer}
     # Choose integrator: for example 'cvodes' for ODEs or 'idas' for DAEs
@@ -109,6 +111,29 @@ def observer(model):
 
     """
     --------------------------------------------------------------------------
+    template_optimizer: time-varying parameters
+    --------------------------------------------------------------------------
+    """
+    # Only necessary if time-varying paramters defined in the model
+    # The length of the vector for each parameter should be the prediction horizon
+    # The vectos for each parameter might chance at each sampling time
+    number_steps = int(t_end/t_step) + 1
+    # Number of time-varying parameters
+    n_tv_p = 2
+    tv_p_values = NP.resize(NP.array([]),(number_steps,n_tv_p,n_horizon))
+    for time_step in range (number_steps):
+        if time_step < number_steps/2:
+            tv_param_1_values = 0.6*NP.ones(n_horizon)
+        else:
+            tv_param_1_values = 0.8*NP.ones(n_horizon)
+        tv_param_2_values = 0.9*NP.ones(n_horizon)
+        tv_p_values[time_step] = NP.array([tv_param_1_values,tv_param_2_values])
+    # Parameteres of the NLP which may vary along the time (For example a set point that varies at a given time)
+    set_point = SX.sym('set_point')
+    parameters_nlp = NP.array([set_point])
+
+    """
+    --------------------------------------------------------------------------
     template_observer: tuning parameters mhe
     --------------------------------------------------------------------------
     """
@@ -145,7 +170,8 @@ def observer(model):
     'integration_tool':integration_tool,'method':method,
     't_step_observer': t_step_observer, 'integrator_opts': opts,
     'P_states': P_states, 'P_param': P_param, 'P_inputs': P_inputs,
-    'P_meas': P_meas, 'uncertainty_values':uncertainty_values}
+    'P_meas': P_meas, 'uncertainty_values':uncertainty_values,
+    'tv_p_values':tv_p_values}
 
     observer_1 = core_do_mpc.observer(model,observer_dict)
 
