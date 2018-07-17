@@ -103,6 +103,8 @@ def model():
 
     _x = vertcat(C_a, C_b, T_R,T_K)
 
+    _y = vertcat(C_a, T_R, T_K)
+
     _z = vertcat([])
 
     _u = vertcat(F, Q_dot)
@@ -152,6 +154,7 @@ def model():
     x_scaling = NP.array([1.0, 1.0, 1.0, 1.0])
     z_scaling = NP.array([])
     u_scaling = NP.array([1.0, 1.0])
+    y_scaling = NP.array([1.0, 1.0, 1.0])
 
     # Other possibly nonlinear constraints in the form cons(x,u,p) <= cons_ub
     # Define the expresion of the constraint (leave it empty if not necessary)
@@ -195,9 +198,18 @@ def model():
     template_model: pass information (not necessary to edit)
     --------------------------------------------------------------------------
     """
-    model_dict = {'x':_x,'u': _u, 'rhs':_xdot,'p': _p, 'z':_z,'x0': x0, 'x_lb': x_lb,'x_ub': x_ub, 'u0':u0,
-    'u_lb':u_lb, 'u_ub':u_ub, 'x_scaling':x_scaling, 'u_scaling':u_scaling, 'cons':cons, 'tv_p':_tv_p,
-    "cons_ub": cons_ub, 'cons_terminal':cons_terminal, 'cons_terminal_lb': cons_terminal_lb, 'cons_terminal_ub':cons_terminal_ub, 'soft_constraint': soft_constraint, 'penalty_term_cons': penalty_term_cons, 'maximum_violation': maximum_violation, 'mterm': mterm,'lterm':lterm, 'rterm':rterm}
+    model_dict = {'x':_x,'u': _u, 'y': _y, 'rhs':_xdot,
+                  'p': _p, 'z':_z,'x0': x0, 'x_lb': x_lb,'x_ub': x_ub,
+                  'u0':u0, 'u_lb':u_lb, 'u_ub':u_ub, 'x_scaling':x_scaling,
+                  'u_scaling':u_scaling, 'y_scaling':y_scaling, 'cons':cons,
+                  "cons_ub": cons_ub, 'cons_terminal':cons_terminal,
+                  'cons_terminal_lb': cons_terminal_lb,'tv_p':_tv_p,
+                  'cons_terminal_ub':cons_terminal_ub,
+                  'soft_constraint': soft_constraint,
+                  'penalty_term_cons': penalty_term_cons,
+                  'maximum_violation': maximum_violation,
+                  'mterm': mterm,'lterm':lterm,
+                  'rterm':rterm}
 
     model = core_do_mpc.model(model_dict)
 
