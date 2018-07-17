@@ -557,7 +557,7 @@ def setup_mhe(model, observer):
 
                     # Add equations defining the implicitly defined variables
                     # (i.e. collocation and continuity equations) to the NLP
-                    g.append(g_ksb)
+                    g.append(ALPHA[k]*g_ksb)
                     lbg.append(NP.zeros(n_ik))  # equality constraints
                     ubg.append(NP.zeros(n_ik))  # equality constraints
 
