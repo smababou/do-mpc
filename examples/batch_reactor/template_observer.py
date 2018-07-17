@@ -23,15 +23,130 @@
 
 from casadi import *
 import core_do_mpc
+import numpy as NP
+
 def observer(model):
-	# Full state feedback
-	observer_dict = {'x':1}
-	observer = core_do_mpc.observer(model,observer_dict)
-	# here some functions depending on observer_1
-	# Implement here your own observer
-	"""
-	--------------------------------------------------------------------------
-	template_observer: pass information (not necessary to edit)
-	--------------------------------------------------------------------------
-	"""
-	return observer
+
+    method = 'MHE' # 'EKF' or 'MHE' or 'state-feedback'
+
+    """
+    --------------------------------------------------------------------------
+    template_observer: preprocess model information
+    --------------------------------------------------------------------------
+    """
+
+    # Variables
+    x = model.x
+    u = model.u
+    p = model.p
+    tv_p = model.tv_p
+    y = model.y
+    meas_fcn = Function("meas_fcn",[x,u,p,tv_p],[y])
+
+    nx = x.size(1)
+    nu = u.size(1)
+    np = p.size(1)
+    ny = y.size(1)
+
+    """
+    --------------------------------------------------------------------------
+    template_observer: integration options
+    --------------------------------------------------------------------------
+    """
+    # Choose the simulator time step
+    t_step_observer = 50.0/3600.0
+    # Choose options for the integrator
+    opts = {"abstol":1e-10,"reltol":1e-10, 'tf':t_step_observer}
+    # Choose integrator: for example 'cvodes' for ODEs or 'idas' for DAEs
+    integration_tool = 'cvodes'
+
+    """
+    --------------------------------------------------------------------------
+    template_observer: tuning parameters
+    --------------------------------------------------------------------------
+    """
+
+    # Prediction horizon
+    n_horizon = 20
+    # Robust horizon, set to 0 for standard NMPC
+    n_robust = 0
+    # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
+    open_loop = 0
+    # Choose if optimal control instead of MPC
+    optimal_control = 0
+    # Sampling time
+    t_step = 1.0
+    # Choose type of state discretization (collocation or multiple-shooting)
+    state_discretization = 'collocation'
+    # Degree of interpolating polynomials: 1 to 5
+    poly_degree = 2
+    # Collocation points: 'legendre' or 'radau'
+    collocation = 'radau'
+    # Number of finite elements per control interval
+    n_fin_elem = 3
+    # NLP Solver and linear solver
+    nlp_solver = 'ipopt'
+    qp_solver = 'qpoases'
+
+    # It is highly recommended that you use a more efficient linear solver
+    # such as the hsl linear solver MA27, which can be downloaded as a precompiled
+    # library and can be used by IPOPT on run time
+
+    linear_solver = 'ma27'
+
+    # GENERATE C CODE shared libraries NOTE: Not currently supported
+    generate_code = 0
+
+    """
+    --------------------------------------------------------------------------
+    template_optimizer: uncertain parameters
+    --------------------------------------------------------------------------
+    """
+    # Define the different possible values of the uncertain parameters in the scenario tree
+    Y_x_values = NP.array([0.5, 0.4, 0.3])
+    S_in_values = NP.array([200.0, 220.0, 180.0])
+    uncertainty_values = NP.array([Y_x_values, S_in_values])
+
+    """
+    --------------------------------------------------------------------------
+    template_observer: tuning parameters mhe
+    --------------------------------------------------------------------------
+    """
+
+    P_states = NP.diag(NP.ones(nx))
+
+    P_param = NP.diag([np])
+
+    P_inputs = NP.diag(NP.ones([nu]))*0
+
+    P_meas = NP.diag(NP.ones(nu))
+    # P_meas = NP.diag([1, 1, 1, 10000, 1, 1, 1, 1, 1, 1])
+
+    """
+    --------------------------------------------------------------------------
+    template_observer: measurement function
+    --------------------------------------------------------------------------
+    """
+
+    noise = 'gaussian'
+    mag = NP.ones(ny)*0.00 #standard deviation
+
+
+    """
+    --------------------------------------------------------------------------
+    template_observer: pass information (not necessary to edit)
+    --------------------------------------------------------------------------
+    """
+    observer_dict = {'n_horizon':n_horizon,'state_discretization':state_discretization,
+    'poly_degree':poly_degree,'collocation':collocation,'n_fin_elem':n_fin_elem,
+    'nlp_solver':nlp_solver,'qp_solver':qp_solver,'linear_solver':linear_solver,
+    'generate_code':generate_code,'x':x,'meas_fcn':meas_fcn,'noise':noise,
+    'mag':mag,'t_step':t_step,'open_loop':open_loop,'n_robust':n_robust,
+    'integration_tool':integration_tool,'method':method,
+    't_step_observer': t_step_observer, 'integrator_opts': opts,
+    'P_states': P_states, 'P_param': P_param, 'P_inputs': P_inputs,
+    'P_meas': P_meas, 'uncertainty_values':uncertainty_values}
+
+    observer_1 = core_do_mpc.observer(model,observer_dict)
+
+    return observer_1

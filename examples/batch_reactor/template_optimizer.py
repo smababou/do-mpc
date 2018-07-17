@@ -59,7 +59,7 @@ def optimizer(model):
     # such as the hsl linear solver MA27, which can be downloaded as a precompiled
     # library and can be used by IPOPT on run time
 
-    linear_solver = 'mumps'
+    linear_solver = 'ma27'
 
     # GENERATE C CODE shared libraries NOTE: Not currently supported
     generate_code = 0
@@ -95,6 +95,7 @@ def optimizer(model):
     # Parameteres of the NLP which may vary along the time (For example a set point that varies at a given time)
     set_point = SX.sym('set_point')
     parameters_nlp = NP.array([set_point])
+
     """
     --------------------------------------------------------------------------
     template_optimizer: pass_information (not necessary to edit)
