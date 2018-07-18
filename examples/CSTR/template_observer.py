@@ -137,11 +137,11 @@ def observer(model):
 	--------------------------------------------------------------------------
 	"""
 
-	P_states = NP.diag(NP.ones(nx))*0
+	P_states = NP.diag(NP.ones(nx))*0.01
 
 	P_param = NP.diag([np])
 
-	P_inputs = NP.diag(NP.ones([nu]))*1e5
+	P_inputs = NP.diag(NP.ones([nu]))*0
 
 	# P_meas = NP.diag([10000, 1, 1, 1, 1])
 	P_meas = NP.diag([1.0, 100.0, 1.0])

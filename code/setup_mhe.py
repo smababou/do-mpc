@@ -604,7 +604,8 @@ def setup_mhe(model, observer):
                     ubg.append(cons_terminal_ub)
                 # Add contribution to the cost
                 if k == 0:
-                    [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k], ALPHA[k+1]])
+                    [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k], ALPHA[0]])
+                    J += J_ksb
                 Y_ks = meas_fcn(X_ks, U_ks, P_ksb, TV_P[:, k])
                 [J_ksb] = lagrange_fcn.call([Y_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k],
                                              P_ksb, TV_P[:, k], ALPHA[k]])

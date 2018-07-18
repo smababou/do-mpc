@@ -63,8 +63,9 @@ class mpc_data:
         self.mhe_est_param = NP.resize(NP.array([]),(0 ,np))
         self.mhe_meas_val = NP.resize(NP.array([]),(0 ,ny))
         self.mhe_u_meas_val = NP.resize(NP.array([]),(0 ,nu))
-        self.mhe_y_meas =  NP.resize(NP.array([]),(ny ,n_mhe))
-        self.mhe_u_meas = NP.resize(NP.array([]),(nu ,n_mhe))
+        self.mhe_y_meas =  NP.resize(NP.array([]),(ny, n_mhe))
+        self.mhe_u_meas = NP.resize(NP.array([]),(nu, n_mhe))
+        self.mhe_est_states_shift = NP.resize(NP.array([]),(nx, n_mhe))
 
 class opt_result:
     """ A class for the definition of the result of an optimization problem containing optimal solution, optimal cost and value of the nonlinear constraints"""

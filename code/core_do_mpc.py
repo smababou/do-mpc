@@ -288,6 +288,9 @@ class configuration:
         #NOTE: this could be passed as parameters of the observer class
         opts["ipopt.max_iter"] = 500
         opts["ipopt.tol"] = 1e-6
+        opts["ipopt.ma27_liw_init_factor"] =  100.0
+        opts["ipopt.ma27_la_init_factor"] =  100.0
+        opts["ipopt.ma27_meminc_factor"] =  2.0
         # Setup the solver
         solver = nlpsol("solver", self.observer.nlp_solver, nlp_dict_out['nlp_fcn'], opts)
         arg = {}
@@ -431,7 +434,7 @@ class configuration:
         param_mhe = parameters_setup_mhe(0)
         param_mhe["uk_prev"] = self.optimizer.u_mpc
         param_mhe["TV_P"] = self.observer.tv_p_values[step_index]
-        param_mhe["X_EST"] = self.observer.observed_states
+        param_mhe["X_EST"] = self.mpc_data.mhe_est_states_shift[:,0]
         param_mhe["Y_MEAS"] = self.mpc_data.mhe_y_meas
         param_mhe["U_MEAS"] = self.mpc_data.mhe_u_meas
         alpha = self.observer.arg["p"]["ALPHA"]
@@ -517,6 +520,8 @@ class configuration:
             # x_val = NP.zeros(10)
         data.mhe_est_states = NP.append(data.mhe_est_states,x_val, axis = 0)
         data.mhe_meas_val = NP.append(data.mhe_meas_val,[self.observer.measurement], axis = 0)
+        data.mhe_est_states_shift = NP.roll(data.mhe_est_states_shift,-1,axis=1)
+        data.mhe_est_states_shift[:,-1] = x_val
         # data.mhe_y_meas = NP.roll(data.mhe_y_meas,-1,axis=1)
         # data.mhe_y_meas[:,-1] = self.observer.measurement
         data.mhe_u_meas_val = NP.append(data.mhe_u_meas_val,u_val, axis = 0)

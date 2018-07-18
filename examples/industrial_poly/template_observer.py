@@ -85,7 +85,7 @@ def observer(model):
     # Collocation points: 'legendre' or 'radau'
     collocation = 'radau'
     # Number of finite elements per control interval
-    n_fin_elem = 3
+    n_fin_elem = 1
     # NLP Solver and linear solver
     nlp_solver = 'ipopt'
     qp_solver = 'qpoases'
@@ -138,13 +138,14 @@ def observer(model):
     --------------------------------------------------------------------------
     """
 
-    P_states = NP.diag(NP.ones(nx))*0.1
+    P_states = NP.diag(NP.ones(nx))*0.0
+    P_states = NP.diag([1,1,1,0.01,0.01,0.01,0.01,0.01,0.01,0.01])*0.01
 
     P_param = NP.diag([np])
 
     P_inputs = NP.diag(NP.ones([nu]))*0
 
-    P_meas = NP.diag([100, 1, 1, 1, 1, 1, 1])
+    P_meas = NP.diag([10, 1, 1, 1, 1, 1])
     # P_meas = NP.diag([1, 1, 1, 10000, 1, 1, 1, 1, 1, 1])
 
     """
@@ -154,7 +155,8 @@ def observer(model):
     """
 
     noise = 'gaussian'
-    mag = NP.ones(ny)*0.00 #standard deviation
+    mag = NP.ones(ny)*0.001 #standard deviation
+    mag = NP.array([0.001, 0.001, 0.001, 0.001, 0.001, 0])
 
 
     """
