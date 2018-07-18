@@ -312,7 +312,8 @@ class configuration:
         parameters_setup_mhe = struct_symMX([entry("uk_prev",shape=(nu)), entry("TV_P",shape=(ntv_p,nk)),
                                              entry("Y_MEAS",shape=(ny,nk)), entry("X_EST",shape=(nx,1)),
                                              entry("U_MEAS", shape=(nu,nk)), entry("P_EST", shape=(np,1)),
-                                             entry("ALPHA", shape=(nk))])
+                                             entry("ALPHA", shape=(nk)),
+                                             entry("ALPHA_ARRIVAL", shape=(nk))])
         param = parameters_setup_mhe(0)
         # First value of the nlp parameters
         param["uk_prev"] = self.model.ocp.u0
@@ -321,7 +322,8 @@ class configuration:
         param["X_EST"] = NP.zeros([nx,1])
         # param["P_EST"] = 3
         param["U_MEAS"] = NP.zeros([nu,nk])
-        arg["ALPHA"] = NP.zeros(nk)
+        param["ALPHA"] = NP.zeros(nk)
+        param["ALPHA_ARRIVAL"] = NP.zeros(nk)
         arg["p"] = param
         # Add new attributes to the observer class
         self.observer.solver = solver
@@ -430,17 +432,28 @@ class configuration:
         parameters_setup_mhe = struct_symMX([entry("uk_prev",shape=(nu)), entry("TV_P",shape=(ntv_p,nk_mhe)),
                                              entry("Y_MEAS",shape=(ny,nk_mhe)), entry("X_EST",shape=(nx,1)),
                                              entry("U_MEAS", shape=(nu,nk_mhe)), entry("P_EST", shape=(np,1)),
-                                             entry("ALPHA", shape=(nk_mhe))])
+                                             entry("ALPHA", shape=(nk_mhe)),
+                                             entry("ALPHA_ARRIVAL", shape=(nk_mhe))])
         param_mhe = parameters_setup_mhe(0)
         param_mhe["uk_prev"] = self.optimizer.u_mpc
         param_mhe["TV_P"] = self.observer.tv_p_values[step_index]
-        param_mhe["X_EST"] = self.mpc_data.mhe_est_states_shift[:,0]
+        iter = self.simulator.mpc_iteration - 2
+        if iter <= self.observer.n_horizon:
+            param_mhe["X_EST"] = self.mpc_data.mhe_est_states_shift[:,-iter]
+        else:
+            param_mhe["X_EST"] = self.mpc_data.mhe_est_states_shift[:,0]
         param_mhe["Y_MEAS"] = self.mpc_data.mhe_y_meas
         param_mhe["U_MEAS"] = self.mpc_data.mhe_u_meas
         alpha = self.observer.arg["p"]["ALPHA"]
         alpha = NP.roll(alpha,-1,axis=0)
         alpha[-1] = 1
         param_mhe["ALPHA"] = NP.squeeze(alpha)
+        alpha_arrival = self.observer.arg["p"]["ALPHA_ARRIVAL"]
+        if iter == 1:
+            alpha_arrival[-1] = 1
+        elif iter <= self.observer.n_horizon:
+            alpha_arrival = NP.roll(alpha_arrival,-1,axis=0)
+        param_mhe["ALPHA_ARRIVAL"] = NP.squeeze(alpha_arrival)
         self.observer.arg['p'] = param_mhe
 
         # include all inputs as constraints

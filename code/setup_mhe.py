@@ -83,6 +83,7 @@ def setup_mhe(model, observer):
     p_est_past = SX.sym("p_est_past",p.shape)
     y_meas = SX.sym("y_meas",y.shape)
     alpha = SX.sym("alpha")
+    alpha_arrival = SX.sym("alpha_arrival")
 
     # build parts of objective function
     P_states = observer.P_states
@@ -133,10 +134,10 @@ def setup_mhe(model, observer):
     cons_terminal = substitute(cons_terminal, u, u * u_scaling)
     cfcn_terminal = Function('cfcn', [x, u, p], [cons_terminal])
     # Mayer term of the cost functions
-    mterm = alpha*J_states
+    mterm = alpha_arrival*J_states
     mterm = substitute(mterm, x, x * x_scaling)
     mterm = substitute(mterm, u, u * u_scaling)
-    mfcn = Function('mfcn', [x, x_est_past, p, tv_p, alpha], [mterm])
+    mfcn = Function('mfcn', [x, x_est_past, p, tv_p, alpha_arrival], [mterm])
     # Lagrange term of the cost function
     # lterm = J_states + J_inputs + J_meas + J_param
     lterm =alpha*J_meas + alpha*J_inputs
@@ -456,7 +457,8 @@ def setup_mhe(model, observer):
         [entry("uk_prev", shape=(nu)), entry("TV_P", shape=(ntv_p, nk)),
          entry("Y_MEAS", shape=(ny,nk)), entry("X_EST", shape=(nx,1)),
          entry("U_MEAS", shape=(nu,nk)), entry("P_EST", shape=(np,1)),
-         entry("ALPHA", shape=(nk))])
+         entry("ALPHA", shape=(nk)),
+         entry("ALPHA_ARRIVAL", shape=(nk))])
     TV_P = parameters_setup_nlp['TV_P']
     uk_prev = parameters_setup_nlp['uk_prev']
     Y_MEAS = parameters_setup_nlp['Y_MEAS']
@@ -464,6 +466,7 @@ def setup_mhe(model, observer):
     U_MEAS = parameters_setup_nlp['U_MEAS']
     P_EST = parameters_setup_nlp['P_EST']
     ALPHA = parameters_setup_nlp['ALPHA']
+    ALPHA_ARRIVAL = parameters_setup_nlp['ALPHA_ARRIVAL']
 
     # The offset variables contain the position of the states and controls in
     # the vector of opt. variables
@@ -603,9 +606,8 @@ def setup_mhe(model, observer):
                     lbg.append(cons_terminal_lb)
                     ubg.append(cons_terminal_ub)
                 # Add contribution to the cost
-                if k == 0:
-                    [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k], ALPHA[0]])
-                    J += J_ksb
+                [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k], ALPHA_ARRIVAL[k]])
+                J += J_ksb
                 Y_ks = meas_fcn(X_ks, U_ks, P_ksb, TV_P[:, k])
                 [J_ksb] = lagrange_fcn.call([Y_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k],
                                              P_ksb, TV_P[:, k], ALPHA[k]])
