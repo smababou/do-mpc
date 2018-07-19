@@ -26,7 +26,7 @@ import core_do_mpc
 import numpy as NP
 def observer(model):
 
-	method = 'MHE' # 'EKF' or 'MHE' or 'state-feedback'
+	method = 'EKF' # 'EKF' or 'MHE' or 'state-feedback'
 
 	"""
 	--------------------------------------------------------------------------
@@ -148,6 +148,25 @@ def observer(model):
 	# P_meas = NP.diag([1.0, 100.0, 100.0])
 
 	"""
+    --------------------------------------------------------------------------
+    template_observer: tuning parameters EKF
+    --------------------------------------------------------------------------
+    """
+
+	# Initial condition for the states
+	C_a_0 = 0.78 # This is the initial concentration inside the tank [mol/l]
+	C_b_0 = 0.49 # This is the controlled variable [mol/l]
+	T_R_0 = 134.141 #[C]
+	T_K_0 = 129.99 #[C]
+	x_init = NP.array([C_a_0, C_b_0, T_R_0, T_K_0])
+
+	P_init = NP.diag([0.05,0.05,0.001,0.001])
+
+	Q = NP.diag(NP.zeros(nx))
+
+	R = NP.diag([0.001,0.001,0.001])
+
+	"""
 	--------------------------------------------------------------------------
 	template_observer: measurement function
 	--------------------------------------------------------------------------
@@ -171,7 +190,8 @@ def observer(model):
 	't_step_observer': t_step_observer, 'integrator_opts': opts,
 	'P_states': P_states, 'P_param': P_param, 'P_inputs': P_inputs,
 	'P_meas': P_meas, 'uncertainty_values':uncertainty_values,
-	'tv_p_values':tv_p_values}
+	'tv_p_values':tv_p_values,'x_init':x_init,'P_init':P_init,
+    'Q':Q,'R':R}
 
 	observer_1 = core_do_mpc.observer(model,observer_dict)
 
