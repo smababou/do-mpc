@@ -381,50 +381,53 @@ class configuration:
         self.optimizer.u_mpc = NP.resize(NP.array(v_opt[U_offset[0][0]:U_offset[0][0]+nu]),(nu))
 
     def make_step_observer(self):
-        self.make_measurement()
-        if (self.simulator.mpc_iteration == 2) and (self.observer.method == 'MHE'):
-            self.init_mhe()
-        if self.observer.method == 'MHE':
-            X_offset = self.observer.nlp_dict_out['X_offset']
-            nx = self.model.x.size(1)
-            arg = self.observer.arg
-            result = self.observer.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
+        if self.observer.method == "state-feedback":
             self.observer.observed_states = self.simulator.xf_sim
-            self.observer.optimal_solution = result['x']
-        elif self.observer.method == 'EKF':
-            # get current values and compute  current matrices
-            nx = self.observer.observer_model.x.size(1)
-            xk = NP.reshape(self.observer.x_hat,(-1,1))
-            zk = NP.reshape(self.observer.measurement,(-1,1))
-            u_mpc = self.optimizer.u_mpc*self.observer.observer_model.ocp.u_scaling
-            p_real = self.simulator.p_real_now(self.simulator.t0_sim)
-            tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
-            H = self.observer.H(xk,u_mpc,p_real,tv_p_real)
-            F = self.observer.F(xk,u_mpc,p_real,tv_p_real)
-            P = self.observer.P
-            R = self.observer.R
-            Q = self.observer.Q
+        else:
+            self.make_measurement()
+            if (self.simulator.mpc_iteration == 2) and (self.observer.method == 'MHE'):
+                self.init_mhe()
+            if self.observer.method == 'MHE':
+                X_offset = self.observer.nlp_dict_out['X_offset']
+                nx = self.model.x.size(1)
+                arg = self.observer.arg
+                result = self.observer.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
+                self.observer.observed_states = self.simulator.xf_sim
+                self.observer.optimal_solution = result['x']
+            elif self.observer.method == 'EKF':
+                # get current values and compute  current matrices
+                nx = self.observer.observer_model.x.size(1)
+                xk = NP.reshape(self.observer.x_hat,(-1,1))
+                zk = NP.reshape(self.observer.measurement,(-1,1))
+                u_mpc = self.optimizer.u_mpc*self.observer.observer_model.ocp.u_scaling
+                p_real = self.simulator.p_real_now(self.simulator.t0_sim)
+                tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
+                H = self.observer.H(xk,u_mpc,p_real,tv_p_real)
+                F = self.observer.F(xk,u_mpc,p_real,tv_p_real)
+                P = self.observer.P
+                R = self.observer.R
+                Q = self.observer.Q
 
-            # Predict states
-            result  = self.observer.simulator(x0 = xk, p = vertcat(u_mpc,p_real,tv_p_real))
-            xk = NP.squeeze(result['xf'])
-            # Predict covariance
-            P = self.observer.P_fun(P,F,Q)
-            # innovation
-            S = inv(mtimes(H,mtimes(P,H.T))+R)
-            # compute Kalman gain
-            K = mtimes(mtimes(P,H.T),S)
-            # residual
-            yk = zk - self.observer.h(xk,u_mpc,p_real,tv_p_real)
-            # update state estimate
-            xk = xk + mtimes(K,yk)
-            #update covariance estimate
-            P = mtimes(NP.diag(NP.ones(nx))-mtimes(K,H),P)
+                # Predict states
+                result  = self.observer.simulator(x0 = xk, p = vertcat(u_mpc,p_real,tv_p_real))
+                xk = NP.squeeze(result['xf'])
+                # Predict covariance
+                P = self.observer.P_fun(P,F,Q)
+                # innovation
+                S = inv(mtimes(H,mtimes(P,H.T))+R)
+                # compute Kalman gain
+                K = mtimes(mtimes(P,H.T),S)
+                # residual
+                yk = zk - self.observer.h(xk,u_mpc,p_real,tv_p_real)
+                # update state estimate
+                xk = xk + mtimes(K,yk)
+                #update covariance estimate
+                P = mtimes(NP.diag(NP.ones(nx))-mtimes(K,H),P)
 
-            self.observer.x_hat = NP.squeeze(xk)
+                self.observer.x_hat = NP.squeeze(xk)
 
-            # self.observer.observed_states = self.observer.x_hat/self.model.ocp.x_scaling
-            self.observer.observed_states = self.simulator.xf_sim
+                # self.observer.observed_states = self.observer.x_hat/self.model.ocp.x_scaling
+                self.observer.observed_states = self.simulator.xf_sim
 
 
     def init_mhe(self):
@@ -468,9 +471,6 @@ class configuration:
         self.simulator.tf_sim = self.simulator.tf_sim + self.simulator.t_step_simulator
 
     def make_measurement(self):
-        # NOTE: Here implement the own measurement function (or load it)
-        # This is a dummy measurement
-        # self.simulator.measurement = self.simulator.xf_sim
         data = self.mpc_data
         nu = self.model.u.size(1)
         nx = self.model.x.size(1)
