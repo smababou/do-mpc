@@ -27,7 +27,7 @@ import numpy as NP
 
 def observer(model):
 
-    method = 'MHE' # 'EKF' or 'MHE' or 'state-feedback'
+    method = 'state-feedback' # 'EKF' or 'MHE' or 'state-feedback'
 
     """
     --------------------------------------------------------------------------
@@ -149,12 +149,26 @@ def observer(model):
 
     """
     --------------------------------------------------------------------------
+    template_observer: tuning parameters EKF
+    --------------------------------------------------------------------------
+    """
+
+    x_init = NP.array(NP.zeros(nx))
+
+    P_init = NP.diag(NP.ones(nx))
+
+    Q = NP.diag(NP.zeros(nx))
+
+    R = NP.diag([NP.ones(ny)])
+
+    """
+    --------------------------------------------------------------------------
     template_observer: measurement function
     --------------------------------------------------------------------------
     """
 
     noise = 'gaussian'
-    mag = NP.ones(ny)*0.00 #standard deviation
+    mag = NP.ones(ny)*0.001 #standard deviation
 
 
     """
@@ -171,7 +185,8 @@ def observer(model):
     't_step_observer': t_step_observer, 'integrator_opts': opts,
     'P_states': P_states, 'P_param': P_param, 'P_inputs': P_inputs,
     'P_meas': P_meas, 'uncertainty_values':uncertainty_values,
-    'tv_p_values':tv_p_values}
+    'tv_p_values':tv_p_values,'x_init':x_init,'P_init':P_init,
+    'Q':Q,'R':R}
 
     observer_1 = core_do_mpc.observer(model,observer_dict)
 
