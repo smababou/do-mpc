@@ -38,7 +38,6 @@ class mpc_data:
         nu = configuration.model.u.size(1)
         np = configuration.model.p.size(1)
         ny = configuration.model.y.size(1)
-        n_mhe = configuration.observer.n_horizon
         if NP.size(configuration.model.z) > 0: # If DAE
             nz = configuration.model.z.size(1)
         else: # Model is ODE
@@ -60,12 +59,14 @@ class mpc_data:
         self.mpc_time[0] = 0
         # Store data for MHE
         self.mhe_est_states = NP.resize(NP.array([]),(0 ,nx))
-        self.mhe_est_param = NP.resize(NP.array([]),(0 ,np))
-        self.mhe_meas_val = NP.resize(NP.array([]),(0 ,ny))
-        self.mhe_u_meas_val = NP.resize(NP.array([]),(0 ,nu))
-        self.mhe_y_meas =  NP.resize(NP.array([]),(ny, n_mhe))
-        self.mhe_u_meas = NP.resize(NP.array([]),(nu, n_mhe))
-        self.mhe_est_states_shift = NP.resize(NP.array([]),(nx, n_mhe))
+        if configuration.observer.method == "MHE":
+            n_mhe = configuration.observer.n_horizon
+            self.mhe_est_param = NP.resize(NP.array([]),(0 ,np))
+            self.mhe_meas_val = NP.resize(NP.array([]),(0 ,ny))
+            self.mhe_u_meas_val = NP.resize(NP.array([]),(0 ,nu))
+            self.mhe_y_meas =  NP.resize(NP.array([]),(ny, n_mhe))
+            self.mhe_u_meas = NP.resize(NP.array([]),(nu, n_mhe))
+            self.mhe_est_states_shift = NP.resize(NP.array([]),(nx, n_mhe))
 
 class opt_result:
     """ A class for the definition of the result of an optimization problem containing optimal solution, optimal cost and value of the nonlinear constraints"""
@@ -99,8 +100,9 @@ def plot_mpc(configuration):
     mpc_data = configuration.mpc_data
     mpc_states = mpc_data.mpc_states
     mpc_states_est = mpc_data.mhe_est_states
-    mpc_meas_val = mpc_data.mhe_meas_val
-    mpc_u_meas_val = mpc_data.mhe_u_meas_val
+    if configuration.observer.method == "MHE":
+        mpc_meas_val = mpc_data.mhe_meas_val
+        mpc_u_meas_val = mpc_data.mhe_u_meas_val
     mpc_control = mpc_data.mpc_control
     mpc_time = mpc_data.mpc_time
     index_mpc = configuration.simulator.mpc_iteration
@@ -129,14 +131,15 @@ def plot_mpc(configuration):
 
     # Plot the control inputs
     for index in range(len(plot_control)):
-    	plot = plt.subplot(total_subplots, 1, len(plot_states) + index + 1)
-    	plt.plot(mpc_time[0:index_mpc], mpc_control[0:index_mpc,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
-        plt.hold(True)
-        plt.plot(mpc_time[1:index_mpc], mpc_u_meas_val[0:index_mpc-1,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
-    	plt.ylabel(str(u[plot_control[index]]))
-    	plt.xlabel("Time")
-    	plt.grid()
-    	plot.yaxis.set_major_locator(MaxNLocator(4))
+        plot = plt.subplot(total_subplots, 1, len(plot_states) + index + 1)
+        plt.plot(mpc_time[0:index_mpc], mpc_control[0:index_mpc,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
+        if configuration.observer.method == "MHE":
+            plt.hold(True)
+            plt.plot(mpc_time[1:index_mpc], mpc_u_meas_val[0:index_mpc-1,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
+        plt.ylabel(str(u[plot_control[index]]))
+        plt.xlabel("Time")
+        plt.grid()
+        plot.yaxis.set_major_locator(MaxNLocator(4))
 
 
 
