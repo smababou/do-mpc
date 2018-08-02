@@ -54,9 +54,9 @@ def observer(model):
     --------------------------------------------------------------------------
     """
     # Choose the simulator time step
-    t_step_observer = 50.0/3600.0
+    t_step_observer = 2.0/3600.0
     # Simulation time
-    t_end = 5.0
+    t_end = 10.0
     # Choose options for the integrator
     opts = {"abstol":1e-10,"reltol":1e-10, 'tf':t_step_observer}
     # Choose integrator: for example 'cvodes' for ODEs or 'idas' for DAEs
@@ -138,14 +138,14 @@ def observer(model):
     --------------------------------------------------------------------------
     """
 
-    P_states = NP.diag(NP.ones(nx))*0.0
-    P_states = NP.diag([1,1,1,0.01,0.01,0.01,0.01,0.01,0.01,0.01])*0.01
+    # P_states = NP.diag(NP.ones(nx))*0.0
+    P_states = NP.diag([1,1,1,0.01,0.01,0.01,0.01,0.01,0.01,0.01])*0.000
 
     P_param = NP.diag([np])
 
     P_inputs = NP.diag(NP.ones([nu]))*0
 
-    P_meas = NP.diag([10, 1, 1, 1, 1, 1])
+    P_meas = NP.diag([ 10, 1, 1, 1, 1, 10])
     # P_meas = NP.diag([1, 1, 1, 10000, 1, 1, 1, 1, 1, 1])
 
     """
@@ -167,13 +167,33 @@ def observer(model):
     T_adiab_0		= m_A_0*delH_R_real/((m_W_0+m_A_0+m_P_0)*c_pR)+T_R_0
 
     accum_momom_0   = 300.0
+
     x_init = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0,T_adiab_0])
 
-    P_init = NP.diag(NP.ones(nx))
+    P_init = NP.diag([0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.001,.5,0.5])
+    # P_init = NP.ones([12,12])
+    # P_init[10,10] = 27000
+    # P_init[11,11] = 10
 
-    Q = NP.diag(NP.zeros(nx))
+    Q = NP.diag([0.001,0.001,0.001,0.0001,0.0001,0.0001,0.0001,0.0001,0.1,0.00,0.05,0.0001])
+    #Q = NP.diag([0,0,0,0.00,0.00,0.00,0.00,0.00,0.0000,0.0,0.01,0.001])
+    R = NP.diag([0.1, 0.001, 0.001, 0.001, 0.001, 0.001, 0.0])*1
 
-    R = NP.diag([3,3,3,3,3,2])*100
+    # Q_update = 'sensitivity' # monte-carlo or sensitivity
+    #
+    # CP = NP.diag([27075.0, 6.1777]) #covariance of the parameters
+    #
+    # n_sim = 500 #number of monte-carlo simulations to obtain process noise covariance matrix
+
+    """
+    --------------------------------------------------------------------------
+    template_observer: tuning parameters EKF
+    --------------------------------------------------------------------------
+    """
+
+    alpha = 1e-3
+    kappa = 0
+    beta = 2
 
     """
     --------------------------------------------------------------------------
@@ -182,8 +202,8 @@ def observer(model):
     """
 
     noise = 'gaussian'
-    mag = NP.ones(ny)*0.001 #standard deviation
-    mag = NP.array([0.001, 0.001, 0.001, 0.001, 0.001, 0])
+    # mag = NP.ones(ny)*0.001 #standard deviation
+    mag = NP.array([0.1, 0.001, 0.001, 0.001, 0.001, 0.001, 0.0])*1
 
 
     """

@@ -60,9 +60,9 @@ class mpc_data:
         if not configuration.observer.method == "state-feedback":
             # Store data for MHE and EKF
             self.mhe_est_states = NP.resize(NP.array([]),(0 ,nx))
+            self.mhe_est_param = NP.resize(NP.array([]),(0 ,np))
             if configuration.observer.method == "MHE":
                 n_mhe = configuration.observer.n_horizon
-                self.mhe_est_param = NP.resize(NP.array([]),(0 ,np))
                 self.mhe_meas_val = NP.resize(NP.array([]),(0 ,ny))
                 self.mhe_u_meas_val = NP.resize(NP.array([]),(0 ,nu))
                 self.mhe_y_meas =  NP.resize(NP.array([]),(ny, n_mhe))

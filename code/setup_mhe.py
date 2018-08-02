@@ -65,10 +65,7 @@ def setup_mhe(model, observer):
     soft_constraint = 0
     penalty_term_cons = model.ocp.penalty_term_cons
     maximum_violation = model.ocp.maximum_violation
-    meas_fcn = observer.meas_fcn
-    # mterm = model.ocp.mterm
-    # lterm = model.ocp.lterm
-    # rterm = model.ocp.rterm
+    meas_exp = observer.observer_model.y
     x = model.x
     u = model.u
     y = model.y
@@ -76,6 +73,10 @@ def setup_mhe(model, observer):
     z = model.z
     tv_p = model.tv_p
     xdot = model.rhs
+    meas_exp = substitute(meas_exp,x,x*x_scaling)
+    meas_exp = substitute(meas_exp,u,u*u_scaling)
+    meas_exp = meas_exp/y_scaling
+    meas_fcn = Function("meas_fcn",[x,u,p,tv_p],[meas_exp])
 
     # make variables for past measurements and estimations
     x_est_past = SX.sym("x_est_past",x.shape)
@@ -135,15 +136,10 @@ def setup_mhe(model, observer):
     cfcn_terminal = Function('cfcn', [x, u, p], [cons_terminal])
     # Mayer term of the cost functions
     mterm = alpha_arrival*J_states
-    mterm = substitute(mterm, x, x * x_scaling)
-    mterm = substitute(mterm, u, u * u_scaling)
     mfcn = Function('mfcn', [x, x_est_past, p, tv_p, alpha_arrival], [mterm])
     # Lagrange term of the cost function
     # lterm = J_states + J_inputs + J_meas + J_param
     lterm =alpha*J_meas + alpha*J_inputs
-    lterm = substitute(lterm, x, x * x_scaling)
-    lterm = substitute(lterm, y_meas, y_meas * y_scaling)
-    lterm = substitute(lterm, u, u * u_scaling)
     lagrange_fcn = Function('lagrange_fcn', [y, y_meas, u, u_est_past,
                                              p, tv_p, alpha], [lterm])
     # Penalty term for the control inputs
@@ -608,7 +604,7 @@ def setup_mhe(model, observer):
                 # Add contribution to the cost
                 [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k], ALPHA_ARRIVAL[k]])
                 J += J_ksb
-                Y_ks = meas_fcn(X_ks, U_ks, P_ksb, TV_P[:, k])
+                Y_ks = meas_fcn(xf_ksb, U_ks, P_ksb, TV_P[:, k])
                 [J_ksb] = lagrange_fcn.call([Y_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k],
                                              P_ksb, TV_P[:, k], ALPHA[k]])
                 J += J_ksb #omega[k] * J_ksb

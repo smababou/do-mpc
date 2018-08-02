@@ -133,7 +133,7 @@ def model():
 
     _x = vertcat(m_W, m_A, m_P, T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom, T_adiab)
 
-    _y = vertcat(T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom)
+    _y = vertcat(m_W,T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom)
     # _y = _x
 
     _u = vertcat(m_dot_f,T_in_M,T_in_EK)
@@ -206,9 +206,9 @@ def model():
     u0   = NP.array([m_dot_f_0 , T_in_M_0, T_in_EK_0])
 
     # Scaling factors for the states and control inputs. Important if the system is ill-conditioned
-    x_scaling= NP.array([10.0, 10.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10, 1])#NP.array([10.0, 10.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10,1])
+    x_scaling= NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])#NP.array([10.0, 10.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10,1])
     u_scaling = NP.array([100.0, 1.0, 1.0]) #NP.array([100.0, 1.0, 1.0])
-    y_scaling = NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 10.0])
+    y_scaling = NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     # y_scaling = x_scaling
 
     # Other possibly nonlinear constraints in the form cons(x,u,p) <= cons_ub

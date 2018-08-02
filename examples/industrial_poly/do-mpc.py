@@ -35,6 +35,7 @@ from casadi import *
 import core_do_mpc
 # Import do-mpc plotting and data managament functions
 import data_do_mpc
+import numpy as NP
 import pdb
 """
 -----------------------------------------------
@@ -68,7 +69,11 @@ do-mpc: MPC loop
 """
 # Do not stop until a predefined amount of polymer has been produced
 #while (configuration_1.simulator.x0_sim[2] * configuration_1.model.ocp.x_scaling[2] < 20681):
-while (configuration_1.simulator.t0_sim <= 1.0):
+m_P_0 = configuration_1.model.ocp.x0[2]
+accum_momom_0 = configuration_1.model.ocp.x0[8]
+configuration_1.simulator.p_real_batch = NP.array([950.0*1.2, 7.0*1.2]) #* NP.random.uniform([0.7,0.7],[1.3,1.3])
+# while (configuration_1.simulator.x0_sim[2] * configuration_1.model.ocp.x_scaling[2] < 20681-m_P_0-accum_momom_0-200):
+while configuration_1.simulator.tf_sim < 1.0:
 
     """
     ----------------------------
@@ -121,7 +126,11 @@ do-mpc: Plot the closed-loop results
 
 # Export to matlab if wanted
 data_do_mpc.export_to_matlab(configuration_1)
-
+print("=======================================================================")
+print(configuration_1.simulator.p_real_batch)
+print("=======================================================================")
+print(configuration_1.mpc_data.mhe_est_param)
+print("=======================================================================")
 data_do_mpc.plot_mpc(configuration_1)
 
 raw_input("Press Enter to exit do-mpc...")

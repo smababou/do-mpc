@@ -43,6 +43,7 @@ def simulator(model):
     # to perform the simulation of the system. They can be constant or time-varying
     def p_real_now(current_time):
         if current_time >= 0:
+            # p_real =  NP.array([950.0*1.2, 7.0*1.2])
             p_real =  NP.array([950.0, 7.0])
         else:
             p_real =  NP.array([950.0, 7.0])
