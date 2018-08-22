@@ -59,15 +59,15 @@ class mpc_data:
         self.mpc_time[0] = 0
         if not configuration.observer.method == "state-feedback":
             # Store data for MHE and EKF
-            self.mhe_est_states = NP.resize(NP.array([]),(0 ,nx))
-            self.mhe_est_param = NP.resize(NP.array([]),(0 ,np))
-            if configuration.observer.method == "MHE":
-                n_mhe = configuration.observer.n_horizon
-                self.mhe_meas_val = NP.resize(NP.array([]),(0 ,ny))
-                self.mhe_u_meas_val = NP.resize(NP.array([]),(0 ,nu))
-                self.mhe_y_meas =  NP.resize(NP.array([]),(ny, n_mhe))
-                self.mhe_u_meas = NP.resize(NP.array([]),(nu, n_mhe))
-                self.mhe_est_states_shift = NP.resize(NP.array([]),(nx, n_mhe))
+            self.est_time = NP.array([[0.0]])
+            if configuration.observer.method == "EKF":
+                self.est_states = NP.reshape(configuration.observer.ekf.x_hat,(1,-1))
+            elif configuration.observer.method == "MHE":
+                self.est_states = NP.reshape(configuration.observer.mhe.x_hat,(1,-1))
+            self.u_meas = NP.resize(NP.array([]),(0, nu))
+            self.y_meas = NP.resize(NP.array([]),(0, ny))
+            if configuration.observer.param_est:
+                self.est_param = NP.resize(NP.array([]),(0 ,np))
 
 class opt_result:
     """ A class for the definition of the result of an optimization problem containing optimal solution, optimal cost and value of the nonlinear constraints"""
@@ -101,10 +101,13 @@ def plot_mpc(configuration):
     mpc_data = configuration.mpc_data
     mpc_states = mpc_data.mpc_states
     if not configuration.observer.method == "state-feedback":
-        mpc_states_est = mpc_data.mhe_est_states
-    if configuration.observer.method == "MHE":
-        mpc_meas_val = mpc_data.mhe_meas_val
-        mpc_u_meas_val = mpc_data.mhe_u_meas_val
+        mpc_states_est = mpc_data.est_states
+        mpc_meas_val = mpc_data.y_meas
+        est_time = mpc_data.est_time
+        if configuration.observer.param_est:
+            mpc_param = mpc_data.est_param
+            mpc_param_real = NP.reshape(configuration.simulator.p_real_batch,(1,-1))
+            np = configuration.model.p.size(1)
     mpc_control = mpc_data.mpc_control
     mpc_time = mpc_data.mpc_time
     index_mpc = configuration.simulator.mpc_iteration
@@ -114,18 +117,20 @@ def plot_mpc(configuration):
     x_scaling = configuration.model.ocp.x_scaling
     u = configuration.model.u
     u_scaling = configuration.model.ocp.u_scaling
-    y_scaling = configuration.observer.observer_model.ocp.y_scaling
-
+    y_scaling = configuration.model.ocp.y_scaling
     plt.ion()
     fig = plt.figure(1)
     total_subplots = len(plot_states) + len(plot_control)
+    if configuration.observer.param_est:
+        mpc_param_real = NP.repeat(mpc_param_real,len(est_time)-1,axis=0)
+        total_subplots += np
     # First plot the states
     for index in range(len(plot_states)):
         plot = plt.subplot(total_subplots, 1, index + 1)
-        plt.plot(mpc_time[0:index_mpc], mpc_states[0:index_mpc,plot_states[index]] * x_scaling[plot_states[index]])
+        plt.plot(mpc_time[0:index_mpc], mpc_states[:,plot_states[index]] * x_scaling[plot_states[index]])
         if not configuration.observer.method == "state-feedback":
             plt.hold(True)
-            plt.plot(mpc_time[1:index_mpc], mpc_states_est[0:index_mpc-1,plot_states[index]] * x_scaling[plot_states[index]])
+            plt.plot(est_time[0:index_mpc], mpc_states_est[:,plot_states[index]]) #* x_scaling[plot_states[index]])
         # plt.plot(mpc_time[1:index_mpc], mpc_meas_val[0:index_mpc-1,plot_states[index]] * y_scaling[plot_states[index]])
         plt.ylabel(str(x[plot_states[index]]))
         plt.xlabel("Time")
@@ -136,14 +141,24 @@ def plot_mpc(configuration):
     for index in range(len(plot_control)):
         plot = plt.subplot(total_subplots, 1, len(plot_states) + index + 1)
         plt.plot(mpc_time[0:index_mpc], mpc_control[0:index_mpc,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
-        if configuration.observer.method == "MHE":
-            plt.hold(True)
-            plt.plot(mpc_time[1:index_mpc], mpc_u_meas_val[0:index_mpc-1,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
+        # if configuration.observer.method == "MHE":
+        #     plt.hold(True)
+        #     plt.plot(mpc_time[1:index_mpc], mpc_u_meas_val[0:index_mpc-1,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
         plt.ylabel(str(u[plot_control[index]]))
         plt.xlabel("Time")
         plt.grid()
         plot.yaxis.set_major_locator(MaxNLocator(4))
 
+    if configuration.observer.param_est:
+        for index in range(np):
+            plot = plt.subplot(total_subplots, 1, len(plot_states)+len(plot_control) + index + 1)
+            plt.plot(est_time[0:-1], mpc_param_real[:,index])
+            plt.hold(True)
+            plt.plot(est_time[0:-1], mpc_param[:,index])
+            plt.ylabel('p'+str(index))
+            plt.xlabel("Time")
+            plt.grid()
+            plot.yaxis.set_major_locator(MaxNLocator(4))
 
 
 def plot_state_pred(v,t0,el,lineop, n_scenarios, n_branches, nk, child_scenario, X_offset, x_scaling, t_step):

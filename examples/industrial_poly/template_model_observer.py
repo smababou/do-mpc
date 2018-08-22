@@ -131,14 +131,14 @@ def model():
 
     # Concatenate differential states, algebraic states, control inputs and right-hand-sides
 
-    _x = vertcat(m_W, m_A, m_P, T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom, T_adiab)
+    _x = vertcat(m_W, m_A, m_P, T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom)
 
     _y = vertcat(m_W,T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom)
     # _y = _x
 
     _u = vertcat(m_dot_f,T_in_M,T_in_EK)
 
-    _xdot = vertcat(ddm_W, ddm_A, ddm_P, ddT_R, ddT_S, ddTout_M, ddT_EK, ddTout_AWT, ddaccum_momom, ddT_adiab)
+    _xdot = vertcat(ddm_W, ddm_A, ddm_P, ddT_R, ddT_S, ddTout_M, ddT_EK, ddTout_AWT, ddaccum_momom)
 
     # _ydot = _xdot
 
@@ -171,7 +171,7 @@ def model():
     delH_R_real = 950.0*1.00
     T_adiab_0		= m_A_0*delH_R_real/((m_W_0+m_A_0+m_P_0)*c_pR)+T_R_0
 
-    x0   = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0,T_adiab_0])
+    x0   = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0])
 
     # Bounds for the states and initial guess
     temp_range = 2.0
@@ -185,8 +185,8 @@ def model():
     Tout_AWT_lb     = 288.0;    				Tout_AWT_ub = 400.0      # K
     accum_momom_lb  = 0;						accum_momom_ub = 30000
     T_adiab_lb         =300;							T_adiab_ub	=  382.15 + 10 # (implemented as soft constraint)
-    x_lb  = NP.array([m_W_lb, m_A_lb, m_P_lb, T_R_lb, T_S_lb, Tout_M_lb, T_EK_lb, Tout_AWT_lb, accum_momom_lb,T_adiab_lb])
-    x_ub  = NP.array([m_W_ub, m_A_ub, m_P_ub, T_R_ub, T_S_ub, Tout_M_ub, T_EK_ub, Tout_AWT_ub, accum_momom_ub,T_adiab_ub])
+    x_lb  = NP.array([m_W_lb, m_A_lb, m_P_lb, T_R_lb, T_S_lb, Tout_M_lb, T_EK_lb, Tout_AWT_lb, accum_momom_lb])
+    x_ub  = NP.array([m_W_ub, m_A_ub, m_P_ub, T_R_ub, T_S_ub, Tout_M_ub, T_EK_ub, Tout_AWT_ub, accum_momom_ub])
     # x_lb = NP.zeros(10)
     # x_ub= NP.ones(10)*1e7
 
@@ -206,7 +206,7 @@ def model():
     u0   = NP.array([m_dot_f_0 , T_in_M_0, T_in_EK_0])
 
     # Scaling factors for the states and control inputs. Important if the system is ill-conditioned
-    x_scaling= NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])#NP.array([10.0, 10.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10,1])
+    x_scaling= NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])#NP.array([10.0, 10.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0, 10,1])
     u_scaling = NP.array([100.0, 1.0, 1.0]) #NP.array([100.0, 1.0, 1.0])
     y_scaling = NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     # y_scaling = x_scaling

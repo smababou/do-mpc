@@ -131,14 +131,14 @@ def model():
 
     # Concatenate differential states, algebraic states, control inputs and right-hand-sides
 
-    _x = vertcat(m_W, m_A, m_P, T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom, T_adiab)
+    _x = vertcat(m_W, m_A, m_P, T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom)
 
     _y = vertcat(m_W,T_R, T_S, Tout_M, T_EK, Tout_AWT, accum_momom)
     # _y = _x
 
     _u = vertcat(m_dot_f,T_in_M,T_in_EK)
 
-    _xdot = vertcat(ddm_W, ddm_A, ddm_P, ddT_R, ddT_S, ddTout_M, ddT_EK, ddTout_AWT, ddaccum_momom, ddT_adiab)
+    _xdot = vertcat(ddm_W, ddm_A, ddm_P, ddT_R, ddT_S, ddTout_M, ddT_EK, ddTout_AWT, ddaccum_momom)
 
     # _ydot = _xdot
 
@@ -171,22 +171,22 @@ def model():
     delH_R_real = 950.0*1.00
     T_adiab_0		= m_A_0*delH_R_real/((m_W_0+m_A_0+m_P_0)*c_pR)+T_R_0
 
-    x0   = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0,T_adiab_0])
+    x0   = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0])
 
     # Bounds for the states and initial guess
     temp_range = 2.0
     m_W_lb          = 0;    					m_W_ub      = inf      # Kg
     m_A_lb       	= 0;    					m_A_ub      = inf      # Kg
     m_P_lb       	= 26.0;    					m_P_ub      = inf      # Kg
-    T_R_lb     		= 363.15-temp_range-10;   		T_R_ub   	= 363.15+temp_range+10 # K
+    T_R_lb     		= 363.15-temp_range-10;   	T_R_ub   	= 363.15+temp_range+10 # K
     T_S_lb 			= 298.0;    				T_S_ub 		= 400.0      # K
     Tout_M_lb       = 298.0;    				Tout_M_ub   = 400.0      # K
     T_EK_lb    		= 288.0;    				T_EK_ub    	= 400.0      # K
     Tout_AWT_lb     = 288.0;    				Tout_AWT_ub = 400.0      # K
     accum_momom_lb  = 0;						accum_momom_ub = 30000
     T_adiab_lb         =-inf;							T_adiab_ub	=  382.15 + 10 # (implemented as soft constraint)
-    x_lb  = NP.array([m_W_lb, m_A_lb, m_P_lb, T_R_lb, T_S_lb, Tout_M_lb, T_EK_lb, Tout_AWT_lb, accum_momom_lb,T_adiab_lb])
-    x_ub  = NP.array([m_W_ub, m_A_ub, m_P_ub, T_R_ub, T_S_ub, Tout_M_ub, T_EK_ub, Tout_AWT_ub, accum_momom_ub,T_adiab_ub])
+    x_lb  = NP.array([m_W_lb, m_A_lb, m_P_lb, T_R_lb, T_S_lb, Tout_M_lb, T_EK_lb, Tout_AWT_lb, accum_momom_lb])
+    x_ub  = NP.array([m_W_ub, m_A_ub, m_P_ub, T_R_ub, T_S_ub, Tout_M_ub, T_EK_ub, Tout_AWT_ub, accum_momom_ub])
 
     # Bounds for inputs
     m_dot_f_lb = 0.0;  	 m_dot_f_ub = 3.0e4;
@@ -204,23 +204,23 @@ def model():
     u0   = NP.array([m_dot_f_0 , T_in_M_0, T_in_EK_0])
 
     # Scaling factors for the states and control inputs. Important if the system is ill-conditioned
-    x_scaling= NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
+    x_scaling= NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     u_scaling = NP.array([100.0, 1.0, 1.0])
     y_scaling = NP.array([1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0])
     # y_scaling = x_scaling
 
     # Other possibly nonlinear constraints in the form cons(x,u,p) <= cons_ub
     # Define the expresion of the constraint (leave it empty if not necessary)
-    cons = vertcat(T_R,-T_R,T_adiab)
+    cons = vertcat(T_R,-T_R)
     # Define the upper bounds of the constraint (leave it empty if not necessary)
-    cons_ub = NP.array([363.15+temp_range,-363.15+temp_range, 382.15])
+    cons_ub = NP.array([363.15+temp_range,-363.15+temp_range])
     #cons_ub = NP.array([])
     # Activate if the nonlinear constraints should be implemented as soft constraints
     soft_constraint = 1
     # l1 - Penalty term to add in the cost function for the constraints (it should be the same size as cons)
-    penalty_term_cons = NP.array([1e5, 1e5, 1e5])
+    penalty_term_cons = NP.array([1e5, 1e5])
     # Maximum violation for the soft constraints
-    maximum_violation = NP.array([10, 10, 10])
+    maximum_violation = NP.array([20, 20])
 
     # Define the terminal constraint (leave it empty if not necessary)
     cons_terminal = vertcat([])

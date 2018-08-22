@@ -32,19 +32,19 @@ from copy import deepcopy
 import pdb
 
 
-def setup_mhe(model, observer):
+def setup_mhe(model, observer, param_dict):
 
     # Decode all the necessary parameters from the model and optimizer information
     # NOTE: The names of some variables are not consistent. But not critical
     # Parameters from optimizer
     nk = observer.n_horizon
     n_robust = observer.n_robust
-    t_step = observer.t_step
+    t_step = param_dict["t_step_observer"]
     deg = observer.poly_degree
     coll = observer.collocation
     ni = observer.n_fin_elem
-    open_loop = observer.open_loop
-    uncertainty_values = observer.uncertainty_values
+    open_loop = param_dict["open_loop"]
+    uncertainty_values = param_dict["uncertainty_values"]
     # parameters_nlp = observer.parameters_nlp
     state_discretization = observer.state_discretization
     # Parameters from model
@@ -54,6 +54,8 @@ def setup_mhe(model, observer):
     x_ub = model.ocp.x_ub
     u_lb = model.ocp.u_lb
     u_ub = model.ocp.u_ub
+    p_lb = param_dict["p_lb"]
+    p_ub = param_dict["p_ub"]
     x_scaling = model.ocp.x_scaling
     u_scaling = model.ocp.u_scaling
     y_scaling = model.ocp.y_scaling
@@ -65,7 +67,6 @@ def setup_mhe(model, observer):
     soft_constraint = 0
     penalty_term_cons = model.ocp.penalty_term_cons
     maximum_violation = model.ocp.maximum_violation
-    meas_exp = observer.observer_model.y
     x = model.x
     u = model.u
     y = model.y
@@ -73,7 +74,7 @@ def setup_mhe(model, observer):
     z = model.z
     tv_p = model.tv_p
     xdot = model.rhs
-    meas_exp = substitute(meas_exp,x,x*x_scaling)
+    meas_exp = substitute(y,x,x*x_scaling)
     meas_exp = substitute(meas_exp,u,u*u_scaling)
     meas_exp = meas_exp/y_scaling
     meas_fcn = Function("meas_fcn",[x,u,p,tv_p],[meas_exp])
@@ -83,8 +84,6 @@ def setup_mhe(model, observer):
     u_est_past = SX.sym("u_est_past",u.shape)
     p_est_past = SX.sym("p_est_past",p.shape)
     y_meas = SX.sym("y_meas",y.shape)
-    alpha = SX.sym("alpha")
-    alpha_arrival = SX.sym("alpha_arrival")
 
     # build parts of objective function
     P_states = observer.P_states
@@ -135,20 +134,12 @@ def setup_mhe(model, observer):
     cons_terminal = substitute(cons_terminal, u, u * u_scaling)
     cfcn_terminal = Function('cfcn', [x, u, p], [cons_terminal])
     # Mayer term of the cost functions
-    mterm = alpha_arrival*J_states
-    mfcn = Function('mfcn', [x, x_est_past, p, tv_p, alpha_arrival], [mterm])
+    mterm = J_states + J_param
+    mfcn = Function('mfcn', [x, x_est_past, p, tv_p], [mterm])
     # Lagrange term of the cost function
-    # lterm = J_states + J_inputs + J_meas + J_param
-    lterm =alpha*J_meas + alpha*J_inputs
+    lterm = J_meas + J_inputs
     lagrange_fcn = Function('lagrange_fcn', [y, y_meas, u, u_est_past,
-                                             p, tv_p, alpha], [lterm])
-    # Penalty term for the control inputs
-    # u_prev = SX.sym("u_prev", nu)
-    # du = u - u_prev
-    # R = diag(SX(rterm))
-    # rterm = substitute(rterm, x, x * x_scaling)
-    # rterm = substitute(rterm, u, u * u_scaling)
-    # rfcn = Function('rfcn', [u_prev, u], [mtimes(du.T, mtimes(R, du))])
+                                             p, tv_p], [lterm])
 
 
 
@@ -416,7 +407,6 @@ def setup_mhe(model, observer):
     for k in range(nk):
         NV += n_scenarios[k] * (nu + nx + n_branches[k] * n_ik)
     NV += n_scenarios[nk] * nx  # End point
-
     # if soft_constraint:
     #                 # If soft constraints are implemented
     #     NV += cons.size1()
@@ -438,8 +428,8 @@ def setup_mhe(model, observer):
     P = NP.resize(NP.array([], dtype=MX), (len(p_scenario)))
     for b in range(len(p_scenario)):
         P[b] = V[offset:offset + np]
-        vars_lb[offset:offset + np] = p_scenario[b]
-        vars_ub[offset:offset + np] = p_scenario[b]
+        vars_lb[offset:offset + np] = p_lb
+        vars_ub[offset:offset + np] = p_ub
         offset += np
 
     # Get collocated states and parametrized control
@@ -450,19 +440,14 @@ def setup_mhe(model, observer):
     U = NP.resize(NP.array([], dtype=MX), (nk, n_scenarios[-1]))
 
     parameters_setup_nlp = struct_symMX(
-        [entry("uk_prev", shape=(nu)), entry("TV_P", shape=(ntv_p, nk)),
+        [entry("TV_P", shape=(ntv_p, nk)),
          entry("Y_MEAS", shape=(ny,nk)), entry("X_EST", shape=(nx,1)),
-         entry("U_MEAS", shape=(nu,nk)), entry("P_EST", shape=(np,1)),
-         entry("ALPHA", shape=(nk)),
-         entry("ALPHA_ARRIVAL", shape=(nk))])
+         entry("U_MEAS", shape=(nu,nk)), entry("P_EST", shape=(np,1))])
     TV_P = parameters_setup_nlp['TV_P']
-    uk_prev = parameters_setup_nlp['uk_prev']
     Y_MEAS = parameters_setup_nlp['Y_MEAS']
     X_EST = parameters_setup_nlp['X_EST']
     U_MEAS = parameters_setup_nlp['U_MEAS']
     P_EST = parameters_setup_nlp['P_EST']
-    ALPHA = parameters_setup_nlp['ALPHA']
-    ALPHA_ARRIVAL = parameters_setup_nlp['ALPHA_ARRIVAL']
 
     # The offset variables contain the position of the states and controls in
     # the vector of opt. variables
@@ -556,7 +541,7 @@ def setup_mhe(model, observer):
 
                     # Add equations defining the implicitly defined variables
                     # (i.e. collocation and continuity equations) to the NLP
-                    g.append(ALPHA[k]*g_ksb)
+                    g.append(g_ksb)
                     lbg.append(NP.zeros(n_ik))  # equality constraints
                     ubg.append(NP.zeros(n_ik))  # equality constraints
 
@@ -602,11 +587,11 @@ def setup_mhe(model, observer):
                     lbg.append(cons_terminal_lb)
                     ubg.append(cons_terminal_ub)
                 # Add contribution to the cost
-                [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k], ALPHA_ARRIVAL[k]])
+                [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k]])
                 J += J_ksb
                 Y_ks = meas_fcn(xf_ksb, U_ks, P_ksb, TV_P[:, k])
                 [J_ksb] = lagrange_fcn.call([Y_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k],
-                                             P_ksb, TV_P[:, k], ALPHA[k]])
+                                             P_ksb, TV_P[:, k]])
                 J += J_ksb #omega[k] * J_ksb
 
                 # Add contribution to the cost of the soft constraints penalty

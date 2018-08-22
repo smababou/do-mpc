@@ -48,6 +48,8 @@ import template_model
 import template_model_observer
 import template_optimizer
 import template_observer
+import template_EKF
+import template_MHE
 import template_simulator
 
 # Create the objects for each module
@@ -56,7 +58,9 @@ model_observer = template_model_observer.model()
 # Create an optimizer object based on the template and a model
 optimizer_1 = template_optimizer.optimizer(model_1)
 # Create an observer object based on the template and a model
-observer_1 = template_observer.observer(model_observer)
+# observer_1 = template_observer.observer(model_observer)
+# observer_1 = template_EKF.observer(model_observer)
+observer_1 = template_MHE.observer(model_observer)
 # Create a simulator object based on the template and a model
 simulator_1 = template_simulator.simulator(model_1)
 # Create a configuration
@@ -89,7 +93,7 @@ while configuration_1.simulator.tf_sim < 1.0:
     ----------------------------
     """
     # Simulate the system one step using the solution obtained in the optimization
-    configuration_1.make_step_simulator()
+    # configuration_1.make_step_simulator()
 
     """
     ----------------------------
@@ -128,8 +132,6 @@ do-mpc: Plot the closed-loop results
 data_do_mpc.export_to_matlab(configuration_1)
 print("=======================================================================")
 print(configuration_1.simulator.p_real_batch)
-print("=======================================================================")
-print(configuration_1.mpc_data.mhe_est_param)
 print("=======================================================================")
 data_do_mpc.plot_mpc(configuration_1)
 

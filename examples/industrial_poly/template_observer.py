@@ -27,7 +27,7 @@ import numpy as NP
 import pdb
 def observer(model):
 
-    method = 'EKF' # 'EKF' or 'MHE' or 'state-feedback'
+    method = 'state-feedback' # 'EKF' or 'MHE' or 'state-feedback'
 
     """
     --------------------------------------------------------------------------
@@ -54,7 +54,7 @@ def observer(model):
     --------------------------------------------------------------------------
     """
     # Choose the simulator time step
-    t_step_observer = 2.0/3600.0
+    t_step_observer = 5.0/3600.0
     # Simulation time
     t_end = 10.0
     # Choose options for the integrator
@@ -77,7 +77,7 @@ def observer(model):
     # Choose if optimal control instead of MPC
     optimal_control = 0
     # Sampling time
-    t_step = 50.0/3600.0
+    t_step = 5.0/3600.0
     # Choose type of state discretization (collocation or multiple-shooting)
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5
@@ -139,13 +139,13 @@ def observer(model):
     """
 
     # P_states = NP.diag(NP.ones(nx))*0.0
-    P_states = NP.diag([1,1,1,0.01,0.01,0.01,0.01,0.01,0.01,0.01])*0.000
+    P_states = NP.diag([1,1,1,0.01,0.01,0.01,0.01,0.01,0.01])*0.000
 
-    P_param = NP.diag([np])
+    P_param = NP.diag(NP.ones([np]))
 
     P_inputs = NP.diag(NP.ones([nu]))*0
 
-    P_meas = NP.diag([ 10, 1, 1, 1, 1, 10])
+    P_meas = NP.diag([10, 1, 1, 1, 1, 10, 1])
     # P_meas = NP.diag([1, 1, 1, 10000, 1, 1, 1, 1, 1, 1])
 
     """
@@ -170,14 +170,14 @@ def observer(model):
 
     x_init = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0,T_adiab_0])
 
-    P_init = NP.diag([0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.001,.5,0.5])
+    P_init = NP.diag([0.0001,0.01,0.0001,0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,0.01,2,0.02])
     # P_init = NP.ones([12,12])
     # P_init[10,10] = 27000
     # P_init[11,11] = 10
 
-    Q = NP.diag([0.001,0.001,0.001,0.0001,0.0001,0.0001,0.0001,0.0001,0.1,0.00,0.05,0.0001])
+    Q = NP.diag([0.01,0.01,0.01,0.0001,0.0001,0.0001,0.0001,0.0001,0.1,0.1,0.05,0.00001])
     #Q = NP.diag([0,0,0,0.00,0.00,0.00,0.00,0.00,0.0000,0.0,0.01,0.001])
-    R = NP.diag([0.1, 0.001, 0.001, 0.001, 0.001, 0.001, 0.0])*1
+    R = NP.diag([0.1, 0.001, 0.001, 0.001, 0.001, 0.001, 0.0])
 
     # Q_update = 'sensitivity' # monte-carlo or sensitivity
     #
