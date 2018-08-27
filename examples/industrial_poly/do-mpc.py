@@ -75,9 +75,9 @@ do-mpc: MPC loop
 #while (configuration_1.simulator.x0_sim[2] * configuration_1.model.ocp.x_scaling[2] < 20681):
 m_P_0 = configuration_1.model.ocp.x0[2]
 accum_momom_0 = configuration_1.model.ocp.x0[8]
-configuration_1.simulator.p_real_batch = NP.array([950.0*1.2, 7.0*1.2]) #* NP.random.uniform([0.7,0.7],[1.3,1.3])
-# while (configuration_1.simulator.x0_sim[2] * configuration_1.model.ocp.x_scaling[2] < 20681-m_P_0-accum_momom_0-200):
-while configuration_1.simulator.tf_sim < 1.0:
+configuration_1.simulator.p_real_batch = NP.array([950.0, 7.0]) * NP.random.uniform([0.7,0.7],[1.3,1.3])
+while (configuration_1.simulator.x0_sim[2] * configuration_1.model.ocp.x_scaling[2] < 20681-m_P_0-accum_momom_0-200):
+# while configuration_1.simulator.tf_sim < .5:
 
     """
     ----------------------------
@@ -109,7 +109,7 @@ while configuration_1.simulator.tf_sim < 1.0:
     ------------------------------------------------------
     """
     # Store the information
-    configuration_1.store_mpc_data()
+    # configuration_1.store_mpc_data()
 
     # Set initial condition constraint for the next iteration
     configuration_1.prepare_next_iter()

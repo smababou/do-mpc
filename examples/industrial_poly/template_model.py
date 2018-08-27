@@ -177,8 +177,8 @@ def model():
     temp_range = 2.0
     m_W_lb          = 0;    					m_W_ub      = inf      # Kg
     m_A_lb       	= 0;    					m_A_ub      = inf      # Kg
-    m_P_lb       	= 26.0;    					m_P_ub      = inf      # Kg
-    T_R_lb     		= 363.15-temp_range-10;   	T_R_ub   	= 363.15+temp_range+10 # K
+    m_P_lb       	= 0.0;    					m_P_ub      = inf      # Kg
+    T_R_lb     		= 363.15-temp_range-10;   		T_R_ub   	= 363.15+temp_range+10 # K
     T_S_lb 			= 298.0;    				T_S_ub 		= 400.0      # K
     Tout_M_lb       = 298.0;    				Tout_M_ub   = 400.0      # K
     T_EK_lb    		= 288.0;    				T_EK_ub    	= 400.0      # K

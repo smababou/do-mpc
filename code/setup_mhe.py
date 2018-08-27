@@ -135,7 +135,7 @@ def setup_mhe(model, observer, param_dict):
     cfcn_terminal = Function('cfcn', [x, u, p], [cons_terminal])
     # Mayer term of the cost functions
     mterm = J_states + J_param
-    mfcn = Function('mfcn', [x, x_est_past, p, tv_p], [mterm])
+    mfcn = Function('mfcn', [x, x_est_past, p, p_est_past, tv_p], [mterm])
     # Lagrange term of the cost function
     lterm = J_meas + J_inputs
     lagrange_fcn = Function('lagrange_fcn', [y, y_meas, u, u_est_past,
@@ -587,11 +587,12 @@ def setup_mhe(model, observer, param_dict):
                     lbg.append(cons_terminal_lb)
                     ubg.append(cons_terminal_ub)
                 # Add contribution to the cost
-                [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k]])
-                J += J_ksb
-                Y_ks = meas_fcn(xf_ksb, U_ks, P_ksb, TV_P[:, k])
-                [J_ksb] = lagrange_fcn.call([Y_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k],
-                                             P_ksb, TV_P[:, k]])
+                if k == 0:
+                    [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, P_EST, TV_P[:, k]])
+                else:
+                    Y_ks = meas_fcn(xf_ksb, U_ks, P_ksb, TV_P[:, k])
+                    [J_ksb] = lagrange_fcn.call([Y_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k],
+                                                 P_ksb, TV_P[:, k]])
                 J += J_ksb #omega[k] * J_ksb
 
                 # Add contribution to the cost of the soft constraints penalty

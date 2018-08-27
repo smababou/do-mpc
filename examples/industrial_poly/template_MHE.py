@@ -34,9 +34,10 @@ def observer(model):
     """
 
     method = 'MHE'
-    open_loop = True
+    open_loop = False
     t_step = 5.0/3600.0 # Sampling time
     parameter_estimation = True
+    arrival_method = 2
 
     """
     --------------------------------------------------------------------------
@@ -45,11 +46,11 @@ def observer(model):
     """
 
     # Prediction horizon
-    n_horizon = 20
+    n_horizon = 10
     # Robust horizon, set to 0 for standard NMPC
     n_robust = 0
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
-    open_loop = 0
+    # open_loop = 0
     # Choose if optimal control instead of MPC
     optimal_control = 0
     # Choose type of state discretization (collocation or multiple-shooting)
@@ -90,13 +91,13 @@ def observer(model):
     """
 
     # P_states = NP.diag(NP.ones(nx))*0.0
-    P_states = NP.diag([1,1,1,0.01,0.01,0.01,0.01,0.01,0.01])*0.000
+    P_states = NP.diag([1e-8,0.1,0.1,0,1e-8,1e-8,1e-8,1e-8,1e-8])*0.01
 
-    P_param = NP.diag([1.0,1.0])
+    P_param = NP.diag([0.00005,0.8])*5e1
 
-    P_inputs = NP.diag([0.0,0.0,0.0])
+    P_inputs = NP.diag([1.0,1.0,1.0])*0
 
-    P_meas = NP.diag([10, 1, 1, 1, 1, 10, 1])
+    P_meas = NP.diag([1.0, 10.0, 1.0, 1.0, 1.0, 1.0, 1.0])*10
 
     """
     --------------------------------------------------------------------------
@@ -119,7 +120,7 @@ def observer(model):
     accum_momom_0   = 300.0
 
     x_init = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0])
-    p_init = NP.array([950.0, 7.0])
+    p_init = NP.array([950.0, 7.0])*1.0
 
     p_lb = NP.array([950.0, 7.0]) * 0.7
     p_ub = NP.array([950.0, 7.0]) * 1.3
@@ -149,7 +150,7 @@ def observer(model):
     'P_meas': P_meas, 'uncertainty_values':uncertainty_values,
     'method':method,'open_loop':open_loop,'t_step_observer':t_step,
     'x_init':x_init,'p_init':p_init,'p_lb':p_lb,'p_ub':p_ub,
-    'parameter_estimation':parameter_estimation}
+    'parameter_estimation':parameter_estimation,'arrival_method':arrival_method}
 
     observer_1 = core_do_mpc.observer(model,observer_dict)
 

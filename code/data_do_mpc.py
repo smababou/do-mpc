@@ -61,7 +61,7 @@ class mpc_data:
             # Store data for MHE and EKF
             self.est_time = NP.array([[0.0]])
             if configuration.observer.method == "EKF":
-                self.est_states = NP.reshape(configuration.observer.ekf.x_hat,(1,-1))
+                self.est_states = NP.reshape(configuration.observer.ekf.x_hat[:nx],(1,-1))
             elif configuration.observer.method == "MHE":
                 self.est_states = NP.reshape(configuration.observer.mhe.x_hat,(1,-1))
             self.u_meas = NP.resize(NP.array([]),(0, nu))
@@ -108,6 +108,8 @@ def plot_mpc(configuration):
             mpc_param = mpc_data.est_param
             mpc_param_real = NP.reshape(configuration.simulator.p_real_batch,(1,-1))
             np = configuration.model.p.size(1)
+        if configuration.observer.method == "MHE":
+            est_control = mpc_data.u_meas
     mpc_control = mpc_data.mpc_control
     mpc_time = mpc_data.mpc_time
     index_mpc = configuration.simulator.mpc_iteration
@@ -121,13 +123,14 @@ def plot_mpc(configuration):
     plt.ion()
     fig = plt.figure(1)
     total_subplots = len(plot_states) + len(plot_control)
-    if configuration.observer.param_est:
-        mpc_param_real = NP.repeat(mpc_param_real,len(est_time)-1,axis=0)
-        total_subplots += np
+    if not configuration.observer.method == "state-feedback":
+        if configuration.observer.param_est:
+            mpc_param_real = NP.repeat(mpc_param_real,len(est_time)-1,axis=0)
+            total_subplots += np
     # First plot the states
     for index in range(len(plot_states)):
         plot = plt.subplot(total_subplots, 1, index + 1)
-        plt.plot(mpc_time[0:index_mpc], mpc_states[:,plot_states[index]] * x_scaling[plot_states[index]])
+        plt.plot(mpc_time, mpc_states[:,plot_states[index]] * x_scaling[plot_states[index]])
         if not configuration.observer.method == "state-feedback":
             plt.hold(True)
             plt.plot(est_time[0:index_mpc], mpc_states_est[:,plot_states[index]]) #* x_scaling[plot_states[index]])
@@ -140,25 +143,26 @@ def plot_mpc(configuration):
     # Plot the control inputs
     for index in range(len(plot_control)):
         plot = plt.subplot(total_subplots, 1, len(plot_states) + index + 1)
-        plt.plot(mpc_time[0:index_mpc], mpc_control[0:index_mpc,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
-        # if configuration.observer.method == "MHE":
-        #     plt.hold(True)
-        #     plt.plot(mpc_time[1:index_mpc], mpc_u_meas_val[0:index_mpc-1,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
+        plt.plot(mpc_time, mpc_control[:,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
+        if configuration.observer.method == "MHE":
+            plt.hold(True)
+            plt.plot(est_time[1:], est_control[0:index_mpc-1,plot_control[index]] * u_scaling[plot_control[index]] ,drawstyle='steps')
         plt.ylabel(str(u[plot_control[index]]))
         plt.xlabel("Time")
         plt.grid()
         plot.yaxis.set_major_locator(MaxNLocator(4))
 
-    if configuration.observer.param_est:
-        for index in range(np):
-            plot = plt.subplot(total_subplots, 1, len(plot_states)+len(plot_control) + index + 1)
-            plt.plot(est_time[0:-1], mpc_param_real[:,index])
-            plt.hold(True)
-            plt.plot(est_time[0:-1], mpc_param[:,index])
-            plt.ylabel('p'+str(index))
-            plt.xlabel("Time")
-            plt.grid()
-            plot.yaxis.set_major_locator(MaxNLocator(4))
+    if not configuration.observer.method == "state-feedback":
+        if configuration.observer.param_est:
+            for index in range(np):
+                plot = plt.subplot(total_subplots, 1, len(plot_states)+len(plot_control) + index + 1)
+                plt.plot(est_time[0:-1], mpc_param_real[:,index])
+                plt.hold(True)
+                plt.plot(est_time[0:-1], mpc_param[:,index])
+                plt.ylabel('p'+str(index))
+                plt.xlabel("Time")
+                plt.grid()
+                plot.yaxis.set_major_locator(MaxNLocator(4))
 
 
 def plot_state_pred(v,t0,el,lineop, n_scenarios, n_branches, nk, child_scenario, X_offset, x_scaling, t_step):

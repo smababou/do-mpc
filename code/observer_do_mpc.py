@@ -21,7 +21,10 @@ class ekf:
         # h = substitute(model_observer.y,u,u*model_observer.ocp.u_scaling)
         # h = substitute(h,x,x*model_observer.ocp.x_scaling)/model_observer.ocp.y_scaling
         # variables
-        self.x_hat = param_dict["x_init"]
+        if param_dict["parameter_estimation"]:
+            self.x_hat = NP.hstack([param_dict["x_init"],param_dict["p_init"]])
+        else:
+            self.x_hat = param_dict["x_init"]
         # tuning parameters
         self.Q = param_dict["Q"]
         self.R = param_dict["R"]
@@ -60,6 +63,8 @@ class mhe:
         self.count = 0
         self.x_hat = param_dict["x_init"]
         self.p_hat = param_dict["p_init"]
+        # arrival method
+        self.arrival_method = param_dict["arrival_method"]
         # setup optimal control problem
         self.mhe_dict_out = setup_mhe.setup_mhe(model,self,param_dict)
         # Set options
@@ -131,6 +136,7 @@ def make_step_observer(conf):
         for est in range(rep_est):
             for sim in range(rep_sim):
                 conf.make_step_simulator()
+                conf.store_mpc_data()
             make_measurement(conf)
             xk = NP.reshape(conf.observer.ekf.x_hat,(-1,1))
             zk = NP.reshape(conf.observer.measurement,(-1,1))
@@ -147,7 +153,7 @@ def make_step_observer(conf):
                 F = conf.observer.ekf.F(xk[:nx],u_mpc,p_nom,tv_p_real)
             F = expm(conf.observer.t_step*NP.atleast_2d(F))
             P = mtimes(mtimes(F,P),F.T)+Q
-
+            conf.observer.ekf.P = P
             # innovation
             S = inv(mtimes(H,mtimes(P,H.T))+R)
 
@@ -165,62 +171,80 @@ def make_step_observer(conf):
 
             #update covariance estimate
             conf.observer.x_hat = NP.squeeze(xk)
+            conf.store_est_data()
+
         if conf.observer.open_loop:
             conf.observer.observed_states = conf.simulator.xf_sim
         else:
             conf.observer.observed_states = conf.observer.x_hat[:nx]/conf.model.ocp.x_scaling
-        conf.store_est_data()
 
     elif conf.observer.method == 'MHE':
         data = conf.mpc_data
         nk = conf.observer.mhe.n_horizon
-        count = conf.observer.mhe.count
         rep_est = int(round(conf.optimizer.t_step/conf.observer.t_step))
         rep_sim = int(round(conf.observer.t_step/conf.simulator.t_step_simulator))
         for n_est in range(rep_est):
             for sim in range(rep_sim):
                 conf.make_step_simulator()
+                conf.store_mpc_data()
             make_measurement(conf)
-            if conf.observer.mhe.count >= conf.observer.mhe.n_horizon:
+            if conf.observer.mhe.count >= nk:
                 X_offset = conf.observer.mhe.mhe_dict_out['X_offset']
                 U_offset = conf.observer.mhe.mhe_dict_out['U_offset']
                 nx = conf.model.x.size(1)
                 np = conf.model.p.size(1)
+                nu = conf.model.u.size(1)
                 arg = conf.observer.mhe.arg
                 # update parameters of optimizer
                 param = arg['p']
-                param["Y_MEAS"] = data.y_meas[count-nk:count,:].T
-                param["X_EST"] = NP.reshape(data.est_states[count-nk-1,:],(-1,1))
-                param["U_MEAS"] = data.u_meas[count-nk:count,:].T
+                param["Y_MEAS"] = data.y_meas[conf.observer.mhe.count-nk:conf.observer.mhe.count,:].T
+                if conf.observer.mhe.arrival_method == 1:
+                    param["X_EST"] = NP.reshape(data.est_states[conf.observer.mhe.count-nk-1,:],(-1,1))
+                elif (conf.observer.mhe.arrival_method == 2) and (conf.observer.mhe.count > nk):
+                    param["X_EST"] = NP.reshape(conf.observer.optimal_solution[X_offset[1][0]:X_offset[1][0]+nx],(-1,1))
+                param["U_MEAS"] = data.u_meas[conf.observer.mhe.count-nk:conf.observer.mhe.count,:].T
+                if conf.observer.param_est:
+                    param["P_EST"] = NP.reshape(data.est_param[-1,:],(-1,1))
                 arg['p'] = param
+                # fix the inputs (and params)
+                # arg['lbx'][:np] = NP.squeeze(conf.simulator.p_real_batch)
+                # arg['ubx'][:np] = NP.squeeze(conf.simulator.p_real_batch)
+                for para in range(conf.observer.mhe.n_horizon):
+                    arg['lbx'][U_offset[para][0]:U_offset[para][0]+nu] = NP.squeeze(param["U_MEAS"][:,para])
+                    arg['ubx'][U_offset[para][0]:U_offset[para][0]+nu] = NP.squeeze(param["U_MEAS"][:,para])
                 # optimization
                 result = conf.observer.mhe.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
                 conf.observer.optimal_solution = result['x']
                 conf.observer.mhe.x_hat = NP.squeeze(conf.observer.optimal_solution[X_offset[-1][0]:X_offset[-1][0]+nx])
+                conf.observer.mhe.u_hat = NP.squeeze(conf.observer.optimal_solution[U_offset[-1][0]:U_offset[-1][0]+nu])
                 if conf.observer.param_est:
                     conf.observer.mhe.p_hat = NP.squeeze(conf.observer.optimal_solution[:np])
-                if conf.observer.open_loop:
-                    conf.observer.observed_states = conf.simulator.xf_sim
-                else:
-                    conf.observer.observed_states = conf.observer.mhe.x_hat
             else:
                 # open loop estimation (simulation) for initialization
                 p_est = conf.observer.mhe.p_hat
-                u_mpc = conf.optimizer.u_mpc
+                conf.observer.mhe.u_hat = conf.optimizer.u_mpc
                 tv_p_real = conf.simulator.tv_p_real_now(conf.simulator.t0_sim)
                 for sim in range(rep_sim):
-                    conf.observer.mhe.x_hat  = NP.squeeze((conf.simulator.simulator(x0 =conf.observer.mhe.x_hat, p = vertcat(u_mpc,p_est,tv_p_real)))['xf'])
-                if conf.observer.open_loop:
-                    conf.observer.observed_states = conf.simulator.xf_sim
-                else:
-                    conf.observer.observed_states = conf.observer.mhe.x_hat
+                    conf.observer.mhe.x_hat  = NP.squeeze((conf.simulator.simulator(x0 =conf.observer.mhe.x_hat, p = vertcat(conf.observer.mhe.u_hat,p_est,tv_p_real)))['xf'])
+                if conf.observer.mhe.count == (nk-1):
+                    if conf.observer.mhe.arrival_method == 2:
+                        conf.observer.mhe.arg['p']['X_EST'] = NP.squeeze(conf.mpc_data.est_states[0,:])
             conf.store_est_data()
-
+        if conf.observer.open_loop:
+            conf.observer.observed_states = conf.simulator.xf_sim
+        else:
+            if conf.observer.method == "EKF":
+                conf.observer.observed_states = conf.observer.ekf.x_hat
+            elif conf.observer.method == "MHE":
+                conf.observer.observed_states = conf.observer.mhe.x_hat
 
 def make_measurement(conf):
     # preprocess data
-    x = conf.simulator.xf_sim
-    u = conf.optimizer.u_mpc
+    x_scaling = conf.model.ocp.x_scaling
+    y_scaling = conf.model.ocp.y_scaling
+    u_scaling = conf.model.ocp.u_scaling
+    x = conf.simulator.xf_sim * x_scaling
+    u = conf.optimizer.u_mpc * u_scaling
     p = conf.simulator.p_real_batch
     tv_p = conf.simulator.tv_p_real_now(conf.simulator.t0_sim)
     conf.observer.measurement = conf.observer.meas_fcn(x,u,p,tv_p)

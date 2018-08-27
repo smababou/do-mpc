@@ -32,10 +32,10 @@ def observer(model):
     template_observer: settings
     --------------------------------------------------------------------------
     """
-    
+
     method = 'EKF'
     open_loop = True
-    t_step = 5.0/3600.0 # Sampling time
+    t_step = 1.0/3600.0 # Sampling time
     parameter_estimation = True
 
     """
@@ -57,7 +57,9 @@ def observer(model):
     T_adiab_0		= m_A_0*delH_R_real/((m_W_0+m_A_0+m_P_0)*c_pR)+T_R_0
     accum_momom_0   = 300.0
 
-    x_init = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0, 950.0, 7.5])
+    x_init = NP.array([m_W_0, m_A_0, m_P_0, T_R_0, T_S_0, Tout_M_0, T_EK_0, Tout_AWT_0, accum_momom_0])
+
+    p_init = NP.array([950.0, 7.5])*1.2
 
     P = NP.diag([0.0001,0.01,0.0001,0.00001,0.00001,0.00001,0.00001,0.00001,0.00001,2,0.02])
 
@@ -84,7 +86,8 @@ def observer(model):
     observer_dict = {'method':method,'t_step_observer':t_step,
                      'parameter_estimation':parameter_estimation,
                      'noise':noise, 'mag':mag,
-                     'x_init':x_init, 'open_loop':open_loop,
+                     'x_init':x_init, 'p_init':p_init,
+                     'open_loop':open_loop,
                      'P':P, 'Q':Q, 'R':R}
 
     observer_1 = core_do_mpc.observer(model,observer_dict)

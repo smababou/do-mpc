@@ -189,11 +189,11 @@ class observer:
             self.noise = param_dict['noise']
             self.mag = param_dict['mag']
             if self.method == 'EKF':
-                if not (len(param_dict) == 10):
+                if not (len(param_dict) == 11):
                     raise Exception("The length of the parameter dictionary is not correct!")
                 self.ekf = observer_do_mpc.ekf(model_observer,param_dict)
             elif self.method == 'MHE':
-                if not (len(param_dict) == 25):
+                if not (len(param_dict) == 26):
                     raise Exception("The length of the parameter dictionary is not correct!")
                 self.mhe = observer_do_mpc.mhe(model_observer,param_dict)
 
@@ -319,7 +319,6 @@ class configuration:
         self.optimizer.arg['p'] = param
 
     def store_mpc_data(self):
-        mpc_iteration = self.simulator.mpc_iteration - 1 #Because already increased in the simulator
         data = self.mpc_data
         data.mpc_states = NP.append(data.mpc_states, [self.simulator.xf_sim], axis = 0)
         data.mpc_control = NP.append(data.mpc_control, [self.optimizer.u_mpc], axis = 0)
@@ -343,12 +342,13 @@ class configuration:
                 p = NP.reshape(x[nx:],(1,-1))
         elif self.observer.method == "MHE":
             x = self.observer.mhe.x_hat
+            u = self.optimizer.u_mpc
+            data.u_meas = NP.append(data.u_meas,NP.reshape(u,(1,-1)),axis=0)
             if self.observer.param_est:
                 p = NP.reshape(self.observer.mhe.p_hat,(1,-1))
             self.observer.mhe.count += 1
         if self.observer.param_est:
             data.est_param = NP.append(data.est_param,p,axis=0)
-        data.u_meas = NP.append(data.u_meas,NP.reshape(self.optimizer.u_mpc,(1,-1)),axis=0)
         data.est_states = NP.append(data.est_states,NP.reshape(x[:nx],(1,-1)),axis=0)
         data.y_meas = NP.append(data.y_meas,NP.reshape(self.observer.measurement,(1,-1)),axis=0)
         data.est_time = NP.append(data.est_time,NP.reshape(self.observer.t_cur,(1,1)),axis=0)
