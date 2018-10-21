@@ -129,7 +129,7 @@ def plot_mpc(configuration):
         plot = plt.subplot(total_subplots, 1, index + 1)
         plt.plot(mpc_time[0:index_mpc], mpc_states[:,plot_states[index]] * x_scaling[plot_states[index]])
         if not configuration.observer.method == "state-feedback":
-            plt.hold(True)
+            # plt.hold(True)
             plt.plot(est_time[0:index_mpc], mpc_states_est[:,plot_states[index]]) #* x_scaling[plot_states[index]])
         # plt.plot(mpc_time[1:index_mpc], mpc_meas_val[0:index_mpc-1,plot_states[index]] * y_scaling[plot_states[index]])
         plt.ylabel(str(x[plot_states[index]]))
@@ -153,7 +153,7 @@ def plot_mpc(configuration):
         for index in range(np):
             plot = plt.subplot(total_subplots, 1, len(plot_states)+len(plot_control) + index + 1)
             plt.plot(est_time[0:-1], mpc_param_real[:,index])
-            plt.hold(True)
+            # plt.hold(True)
             plt.plot(est_time[0:-1], mpc_param[:,index])
             plt.ylabel('p'+str(index))
             plt.xlabel("Time")
@@ -164,7 +164,7 @@ def plot_mpc(configuration):
 def plot_state_pred(v,t0,el,lineop, n_scenarios, n_branches, nk, child_scenario, X_offset, x_scaling, t_step):
   # This function plots the prediction of a state
   #plt.clf()
-  plt.hold(True)
+  # plt.hold(True)
   # Time grid
   tf = t_step * nk
   tgrid = NP.linspace(t0,t0+tf,nk+1)
@@ -184,7 +184,7 @@ def plot_state_pred(v,t0,el,lineop, n_scenarios, n_branches, nk, child_scenario,
 
 def plot_control_pred(v,t0,el,lineop, n_scenarios, n_branches, nk, parent_scenario, U_offset, u_scaling, t_step, u_last_step):
 	# This function plots the prediction of a control input
-	plt.hold(True)
+	# plt.hold(True)
 	# Time grid
 	tf = t_step * nk
 	tgrid = NP.linspace(t0,t0+tf,nk+1)
