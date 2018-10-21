@@ -16,7 +16,8 @@ class ekf:
         nx = x.size(1)
         np = p.size(1)
         f = model.rhs
-        f = vertcat(f,DM(NP.zeros(np)))
+        if param_est:
+            f = vertcat(f,DM(NP.zeros(np)))
         h = model.y
         # h = substitute(model_observer.y,u,u*model_observer.ocp.u_scaling)
         # h = substitute(h,x,x*model_observer.ocp.x_scaling)/model_observer.ocp.y_scaling
@@ -127,6 +128,7 @@ def make_step_observer(conf):
         Q = conf.observer.ekf.Q
         R = conf.observer.ekf.R
         u_mpc = conf.optimizer.u_mpc*conf.model.ocp.u_scaling
+        p_real = conf.simulator.p_real_batch
         tv_p_real = conf.simulator.tv_p_real_now(conf.simulator.t0_sim)
         for est in range(rep_est):
             for sim in range(rep_sim):
@@ -137,14 +139,17 @@ def make_step_observer(conf):
 
             # Predict states
             for sim in range(rep_sim):
-                xk[:nx,0]  = NP.squeeze((conf.simulator.simulator(x0 = xk[:nx,:], p = vertcat(u_mpc,xk[nx:,0],tv_p_real)))['xf'])
+                if conf.observer.param_est:
+                    xk[:nx,0]  = NP.squeeze((conf.simulator.simulator(x0 = xk[:nx,:], p = vertcat(u_mpc,xk[nx:,0],tv_p_real)))['xf'])
+                else:
+                    xk[:nx,0]  = NP.squeeze((conf.simulator.simulator(x0 = xk[:nx,:], p = vertcat(u_mpc,p_real,tv_p_real)))['xf'])
             # Predict covariance
             if conf.observer.param_est:
                 H = conf.observer.ekf.H(xk[:nx],u_mpc,xk[nx:],tv_p_real)
                 F = conf.observer.ekf.F(xk[:nx],u_mpc,xk[nx:],tv_p_real)
             else:
-                H = conf.observer.ekf.H(xk[:nx],u_mpc,p_nom,tv_p_real)
-                F = conf.observer.ekf.F(xk[:nx],u_mpc,p_nom,tv_p_real)
+                H = conf.observer.ekf.H(xk[:nx],u_mpc,p_real,tv_p_real)
+                F = conf.observer.ekf.F(xk[:nx],u_mpc,p_real,tv_p_real)
             F = expm(conf.observer.t_step*NP.atleast_2d(F))
             P = mtimes(mtimes(F,P),F.T)+Q
 
