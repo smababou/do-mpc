@@ -17,7 +17,10 @@ class ekf:
         np = p.size(1)
         f = model.rhs
         if param_est:
-            f = vertcat(f,DM(NP.zeros(np)))
+            # if not (self.optimizer.state_discretization == 'discrete-time'):
+            #     f = vertcat(f,DM(NP.zeros(np)))
+            # else: # NOTE: somehow add handling of discrete systems
+            f = vertcat(f,DM(NP.ones(np)))
         h = model.y
         # h = substitute(model_observer.y,u,u*model_observer.ocp.u_scaling)
         # h = substitute(h,x,x*model_observer.ocp.x_scaling)/model_observer.ocp.y_scaling
@@ -128,7 +131,8 @@ def make_step_observer(conf):
         Q = conf.observer.ekf.Q
         R = conf.observer.ekf.R
         u_mpc = conf.optimizer.u_mpc*conf.model.ocp.u_scaling
-        p_real = conf.simulator.p_real_batch
+        # p_real = conf.simulator.p_real_batch
+        p_real = NP.array([10.0]) # NOTE: hard-coded
         tv_p_real = conf.simulator.tv_p_real_now(conf.simulator.t0_sim)
         for est in range(rep_est):
             for sim in range(rep_sim):
@@ -146,7 +150,7 @@ def make_step_observer(conf):
             # Predict covariance
             if conf.observer.param_est:
                 H = conf.observer.ekf.H(xk[:nx],u_mpc,xk[nx:],tv_p_real)
-                F = conf.observer.ekf.F(conf.observer.ekf.x_hat,u_mpc,xk[nx:],tv_p_real)
+                F = conf.observer.ekf.F(conf.observer.ekf.x_hat[:nx],u_mpc,xk[nx:],tv_p_real)
             else:
                 H = conf.observer.ekf.H(xk[:nx],u_mpc,p_real,tv_p_real)
                 F = conf.observer.ekf.F(conf.observer.ekf.x_hat,u_mpc,p_real,tv_p_real)
@@ -171,11 +175,12 @@ def make_step_observer(conf):
 
             #update covariance estimate
             conf.observer.ekf.x_hat = NP.squeeze(xk)
+            conf.store_est_data()
+
         if conf.observer.open_loop:
             conf.observer.observed_states = conf.simulator.xf_sim
         else:
-            conf.observer.observed_states = conf.observer.x_hat[:nx]/conf.model.ocp.x_scaling
-        conf.store_est_data()
+            conf.observer.observed_states = conf.observer.ekf.x_hat[:nx]/conf.model.ocp.x_scaling
 
     elif conf.observer.method == 'MHE':
         data = conf.mpc_data

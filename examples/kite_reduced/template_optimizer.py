@@ -42,7 +42,7 @@ def optimizer(model):
     # Sampling time
     t_step = 0.15
     # Simulation time
-    t_end = 100.0
+    t_end = 20.0
     # Choose type of state discretization (collocation or multiple-shooting)
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5
@@ -90,7 +90,7 @@ def optimizer(model):
     # Only necessary if time-varying paramters defined in the model
     # The length of the vector for each parameter should be the prediction horizon
     # The vectos for each parameter might chance at each sampling time
-    number_steps = int(t_end/t_step) + 1
+    number_steps = (int(t_end/t_step) + 1)*1000
     # Number of time-varying parameters
     n_tv_p = 2
     tv_p_values = NP.resize(NP.array([]),(number_steps,n_tv_p,n_horizon))

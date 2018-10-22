@@ -33,7 +33,7 @@ def simulator(model):
     --------------------------------------------------------------------------
     """
     # Choose the simulator time step
-    t_step_simulator = 0.15
+    t_step_simulator = 0.05
     # Choose options for the integrator
     opts = {"abstol":1e-10,"reltol":1e-10, 'tf':t_step_simulator}
     # Choose integrator: for example 'cvodes' for ODEs or 'idas' for DAEs
@@ -43,7 +43,7 @@ def simulator(model):
     # to perform the simulation of the system. They can be constant or time-varying
     def p_real_now(current_time):
         v_0_real = 10
-        v_real = v_0_real + 5*sin(2*pi*0.1*current_time)
+        v_real = v_0_real + 3*sin(2*pi*0.1*current_time)
         p_real = NP.hstack([v_real])
         return p_real
 

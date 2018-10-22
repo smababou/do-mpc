@@ -89,7 +89,7 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     ----------------------------
     """
     # Simulate the system one step using the solution obtained in the optimization
-    configuration_1.make_step_simulator()
+    # configuration_1.make_step_simulator()
 
     """
     ----------------------------
