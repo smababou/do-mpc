@@ -28,7 +28,9 @@ import sys
 sys.path.insert(0,path_do_mpc+'code')
 # Do not write bytecode to maintain clean directories
 sys.dont_write_bytecode = True
-
+# Import keras to load trained models
+import keras
+from keras.models import model_from_json
 # Start CasADi
 from casadi import *
 # Import do-mpc core functionalities
@@ -37,6 +39,8 @@ import core_do_mpc
 import data_do_mpc
 
 import numpy as NP
+
+import pdb
 
 """
 -----------------------------------------------
@@ -62,8 +66,24 @@ simulator_1 = template_simulator.simulator(model_1)
 configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
 
 # Set up the solvers
+configuration_1.observer.observed_states = configuration_1.model.ocp.x0
 configuration_1.setup_solver()
+configuration_1.make_step_optimizer()
 
+"""
+-----------------------------------------------
+Load neural network
+-----------------------------------------------
+"""
+
+filename = 'controller_0'
+json_file = open(filename+'.json', 'r')
+loaded_model_json = json_file.read()
+json_file.close()
+loaded_model = model_from_json(loaded_model_json)
+# load weights into new model
+loaded_model.load_weights(filename+".h5")
+print("Loaded model from disk")
 
 """
 ----------------------------
@@ -81,7 +101,16 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     ----------------------------
     """
     # Make one optimizer step (solve the NLP)
-    configuration_1.make_step_optimizer()
+    # configuration_1.make_step_optimizer()
+    u_lb = NP.array([-10.0])
+    u_ub = NP.array([10.0])
+    x_lb = NP.array([0.2, -1.1,-3.0])
+    x_ub = NP.array([0.8, 1.1, 3.3])
+    x_in_scaled = NP.atleast_2d((configuration_1.observer.observed_states - x_lb) / (x_ub - x_lb))
+    u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
+    u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
+    u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
+    configuration_1.optimizer.u_mpc = u_opt_lim
 
     """
     ----------------------------
@@ -89,7 +118,7 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     ----------------------------
     """
     # Simulate the system one step using the solution obtained in the optimization
-    # configuration_1.make_step_simulator()
+    # configuration_1.make_step_simulator() # simulation step in observer included
 
     """
     ----------------------------
