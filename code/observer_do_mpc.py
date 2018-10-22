@@ -134,8 +134,8 @@ def make_step_observer(conf):
             for sim in range(rep_sim):
                 conf.make_step_simulator()
             make_measurement(conf)
-            xk = NP.reshape(conf.observer.ekf.x_hat,(-1,1))
-            zk = NP.reshape(conf.observer.measurement,(-1,1))
+            xk = NP.copy(NP.reshape(conf.observer.ekf.x_hat,(-1,1)))
+            zk = NP.copy(NP.reshape(conf.observer.measurement,(-1,1)))
 
             # Predict states
             for sim in range(rep_sim):
@@ -146,11 +146,12 @@ def make_step_observer(conf):
             # Predict covariance
             if conf.observer.param_est:
                 H = conf.observer.ekf.H(xk[:nx],u_mpc,xk[nx:],tv_p_real)
-                F = conf.observer.ekf.F(xk[:nx],u_mpc,xk[nx:],tv_p_real)
+                F = conf.observer.ekf.F(conf.observer.ekf.x_hat,u_mpc,xk[nx:],tv_p_real)
             else:
                 H = conf.observer.ekf.H(xk[:nx],u_mpc,p_real,tv_p_real)
-                F = conf.observer.ekf.F(xk[:nx],u_mpc,p_real,tv_p_real)
-            F = expm(conf.observer.t_step*NP.atleast_2d(F))
+                F = conf.observer.ekf.F(conf.observer.ekf.x_hat,u_mpc,p_real,tv_p_real)
+            if not (conf.optimizer.state_discretization == 'discrete-time'):
+                F = expm(conf.observer.t_step*NP.atleast_2d(F))
             P = mtimes(mtimes(F,P),F.T)+Q
 
             # innovation
