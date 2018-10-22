@@ -169,7 +169,7 @@ def make_step_observer(conf):
             xk = xk + mtimes(K,yk)
 
             #update covariance estimate
-            conf.observer.x_hat = NP.squeeze(xk)
+            conf.observer.ekf.x_hat = NP.squeeze(xk)
         if conf.observer.open_loop:
             conf.observer.observed_states = conf.simulator.xf_sim
         else:
