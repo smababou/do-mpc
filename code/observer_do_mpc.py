@@ -127,7 +127,7 @@ def make_step_observer(conf):
             nxp = nx
         rep_est = int(round(conf.optimizer.t_step/conf.observer.t_step))
         rep_sim = int(round(conf.observer.t_step/conf.simulator.t_step_simulator))
-        P = conf.observer.ekf.P
+        P = NP.copy(conf.observer.ekf.P)
         Q = conf.observer.ekf.Q
         R = conf.observer.ekf.R
         u_mpc = conf.optimizer.u_mpc*conf.model.ocp.u_scaling
@@ -175,6 +175,7 @@ def make_step_observer(conf):
 
             #update covariance estimate
             conf.observer.ekf.x_hat = NP.squeeze(xk)
+            conf.observer.ekf.P = mtimes((NP.diag(NP.ones(nxp)) - mtimes(K,H)),P)
             conf.store_est_data()
 
         if conf.observer.open_loop:
