@@ -47,7 +47,7 @@ do-mpc: Definition of the do-mpc configuration
 # Import the user defined modules
 import template_model
 import template_optimizer
-import template_observer
+import template_EKF
 import template_simulator
 
 # Create the objects for each module
@@ -55,7 +55,7 @@ model_1 = template_model.model()
 # Create an optimizer object based on the template and a model
 optimizer_1 = template_optimizer.optimizer(model_1)
 # Create an observer object based on the template and a model
-observer_1 = template_observer.observer(model_1)
+observer_1 = template_EKF.observer(model_1)
 # Create a simulator object based on the template and a model
 simulator_1 = template_simulator.simulator(model_1)
 # Create a configuration
@@ -63,18 +63,44 @@ configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, si
 
 # Set up the solvers
 configuration_1.setup_solver()
-
+configuration_1.simulator.p_real_batch = NP.zeros([2])
 
 """
 ----------------------------
 do-mpc: MPC loop
 ----------------------------
 """
+# choose the real parameters
+E_batch = NP.random.uniform(4.0,6.0)
+c_batch = NP.random.uniform(0.005,0.04)
+
+w_mean = 8.0 + NP.random.uniform() * 4.0
+var_t = 0.05 + NP.random.uniform() * 0.1
+w_lb = NP.array([7.0])
+w_ub = NP.array([13.0])
+w_amp_max = NP.minimum(NP.abs(w_ub-w_mean),NP.abs(w_lb-w_mean))
+w_amp = NP.random.uniform() * w_amp_max
+w_shift = NP.random.uniform() * 2.0 * pi
+w_init = w_mean + w_amp * sin(w_shift)
+
+configuration_1.simulator.p_real_batch[0] = E_batch
+# configuration_1.simulator.p_real_batch[1] = c_batch
+configuration_1.simulator.p_real_batch[-1] = w_init
+
+configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.1)
+configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.2)
+
+configuration_1.mpc_data.mpc_parameters[0,:] = configuration_1.simulator.p_real_batch
+configuration_1.mpc_data.mpc_parameters_est[0,:] = configuration_1.observer.ekf.x_hat[3:]
+
+
+
 while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simulator < configuration_1.optimizer.t_end):
+
+    # update wind
     t0_sim = configuration_1.simulator.t0_sim
-    v_0_real = 10
-    v_real = v_0_real + 5*sin(2*pi*0.1*t0_sim)
-    configuration_1.simulator.p_real_batch = NP.array([5.0,0.028,v_real])
+    configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
+
     """
     ----------------------------
     do-mpc: Optimizer
@@ -89,7 +115,7 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     ----------------------------
     """
     # Simulate the system one step using the solution obtained in the optimization
-    configuration_1.make_step_simulator()
+    # configuration_1.make_step_simulator() # NOTE: not necessary when EKF
 
     """
     ----------------------------
@@ -128,6 +154,6 @@ data_do_mpc.plot_mpc(configuration_1)
 
 # Export to matlab if wanted
 data_do_mpc.export_to_matlab(configuration_1)
+data_do_mpc.export_for_learning(configuration_1, "data/data_batch_" + str(1))
 
-
-raw_input("Press Enter to exit do-mpc...")
+input("Press Enter to exit do-mpc...")

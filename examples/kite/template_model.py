@@ -37,6 +37,7 @@ def model():
     h_min = 100.0           # minimum height [m]
     rho = 1.0               # [kg/m^3]
     beta = 0
+    c_tilde = 0.028
 
     """
     --------------------------------------------------------------------------
@@ -46,7 +47,7 @@ def model():
     # Define the uncertainties as CasADi symbols
 
     E_0   = SX.sym("E_0")
-    c_tilde  = SX.sym("c_tilde")
+    # c_tilde  = SX.sym("c_tilde")
     v_0 = SX.sym("v_0")
 
     # Define the differential states as CasADi symbols
@@ -60,6 +61,11 @@ def model():
     # Define the control inputs as CasADi symbols
 
     u_tilde      = SX.sym("u_tilde") # Vdot/V_R [h^-1]
+
+    # Define time-varying parameters that can change at each step of the prediction and at each sampling time of the MPC controller. For example, future weather predictions
+
+    tv_param_1 = SX.sym("tv_param_1")
+    tv_param_2 = SX.sym("tv_param_2")
 
     """
     --------------------------------------------------------------------------
@@ -83,14 +89,17 @@ def model():
 
     _x = vertcat(theta, phi, psi)
 
+    _y = vertcat(theta, phi)
+
     _u = vertcat(u_tilde)
 
     _xdot = vertcat(dtheta, dphi, dpsi)
 
-    _p = vertcat(E_0,c_tilde,v_0)
+    _p = vertcat(E_0,v_0)
 
     _z = []
 
+    _tv_p = vertcat(tv_param_1, tv_param_2)
 
 
     """
@@ -121,6 +130,7 @@ def model():
     # Scaling factors for the states and control inputs. Important if the system is ill-conditioned
     x_scaling = NP.array([1.0, 1.0, 1.0])
     u_scaling = NP.array([1.0])
+    y_scaling = NP.array([1.0,1.0])
 
     # Other possibly nonlinear constraints in the form cons(x,u,p) <= cons_ub
     # Define the expresion of the constraint (leave it empty if not necessary)
@@ -133,9 +143,9 @@ def model():
     # Activate if the nonlinear constraints should be implemented as soft constraints
     soft_constraint = 1
     # l1 - Penalty term to add in the cost function for the constraints (it should be the same size as cons)
-    penalty_term_cons = NP.array([1e2])
+    penalty_term_cons = NP.array([1e4])
     # Maximum violation for the upper and lower bounds
-    maximum_violation = NP.array([2.0])
+    maximum_violation = NP.array([10.0])
 
     # Define the terminal constraint (leave it empty if not necessary)
     cons_terminal = vertcat([])
@@ -164,8 +174,18 @@ def model():
     template_model: pass information (not necessary to edit)
     --------------------------------------------------------------------------
     """
-    model_dict = {'x':_x,'u': _u, 'rhs':_xdot,'p': _p, 'z':_z,'x0': x0,'x_lb': x_lb,'x_ub': x_ub, 'u0':u0, 'u_lb':u_lb, 'u_ub':u_ub, 'x_scaling':x_scaling, 'u_scaling':u_scaling, 'cons':cons,
-    "cons_ub": cons_ub, 'cons_terminal':cons_terminal, 'cons_terminal_lb': cons_terminal_lb, 'cons_terminal_ub':cons_terminal_ub, 'soft_constraint': soft_constraint, 'penalty_term_cons': penalty_term_cons, 'maximum_violation': maximum_violation, 'mterm': mterm,'lterm':lterm, 'rterm':rterm}
+    model_dict = {'x':_x,'u': _u, 'y': _y, 'rhs':_xdot,
+                  'p': _p, 'z':_z,'x0': x0, 'x_lb': x_lb,'x_ub': x_ub,
+                  'u0':u0, 'u_lb':u_lb, 'u_ub':u_ub, 'x_scaling':x_scaling,
+                  'u_scaling':u_scaling, 'y_scaling':y_scaling, 'cons':cons,
+                  "cons_ub": cons_ub, 'cons_terminal':cons_terminal,
+                  'cons_terminal_lb': cons_terminal_lb,'tv_p':_tv_p,
+                  'cons_terminal_ub':cons_terminal_ub,
+                  'soft_constraint': soft_constraint,
+                  'penalty_term_cons': penalty_term_cons,
+                  'maximum_violation': maximum_violation,
+                  'mterm': mterm,'lterm':lterm,
+                  'rterm':rterm}
 
     model = core_do_mpc.model(model_dict)
 

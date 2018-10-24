@@ -40,9 +40,9 @@ def optimizer(model):
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
     open_loop = 0
     # Sampling time
-    t_step = 0.3
+    t_step = 0.15
     # Simulation time
-    t_end = 20.0
+    t_end = 80.0
     # Choose type of state discretization (collocation or multiple-shooting)
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5
@@ -70,11 +70,34 @@ def optimizer(model):
     --------------------------------------------------------------------------
     """
     # Define the different possible values of the uncertain parameters in the scenario tree
-    E_0_values = NP.array([2.5,7.5])
-    c_tilde_values = NP.array([0.004,0.041])
-    v_0_values = NP.array([4.5,15.5])
+    E_0_values = NP.array([4.0,6.0])
+    c_tilde_values = NP.array([0.005,0.04])
+    v_0_values = NP.array([6.9,13.1])
 
-    uncertainty_values = NP.array([E_0_values,c_tilde_values,v_0_values])
+    uncertainty_values = NP.array([E_0_values,v_0_values])
+    # Parameteres of the NLP which may vary along the time (For example a set point that varies at a given time)
+    set_point = SX.sym('set_point')
+    parameters_nlp = NP.array([set_point])
+
+    """
+    --------------------------------------------------------------------------
+    template_optimizer: time-varying parameters
+    --------------------------------------------------------------------------
+    """
+    # Only necessary if time-varying paramters defined in the model
+    # The length of the vector for each parameter should be the prediction horizon
+    # The vectos for each parameter might chance at each sampling time
+    number_steps = (int(t_end/t_step) + 1)*5
+    # Number of time-varying parameters
+    n_tv_p = 2
+    tv_p_values = NP.resize(NP.array([]),(number_steps,n_tv_p,n_horizon))
+    for time_step in range (number_steps):
+        if time_step < number_steps/2:
+            tv_param_1_values = NP.ones(n_horizon)
+        else:
+            tv_param_1_values = NP.ones(n_horizon)
+        tv_param_2_values = NP.ones(n_horizon)
+        tv_p_values[time_step] = NP.array([tv_param_1_values,tv_param_2_values])
     # Parameteres of the NLP which may vary along the time (For example a set point that varies at a given time)
     set_point = SX.sym('set_point')
     parameters_nlp = NP.array([set_point])
@@ -91,6 +114,6 @@ def optimizer(model):
     'n_fin_elem': n_fin_elem,'generate_code':generate_code,'open_loop': open_loop,
     'uncertainty_values':uncertainty_values,'parameters_nlp':parameters_nlp,
     'state_discretization':state_discretization,'nlp_solver': nlp_solver,
-    'linear_solver':linear_solver, 'qp_solver':qp_solver}
+    'linear_solver':linear_solver, 'qp_solver':qp_solver, 'tv_p_values':tv_p_values}
     optimizer_1 = core_do_mpc.optimizer(model,optimizer_dict)
     return optimizer_1

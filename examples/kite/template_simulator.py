@@ -33,7 +33,7 @@ def simulator(model):
     --------------------------------------------------------------------------
     """
     # Choose the simulator time step
-    t_step_simulator = 0.3
+    t_step_simulator = 0.05
     # Choose options for the integrator
     opts = {"abstol":1e-10,"reltol":1e-10, 'tf':t_step_simulator}
     # Choose integrator: for example 'cvodes' for ODEs or 'idas' for DAEs
@@ -47,6 +47,12 @@ def simulator(model):
         else:
             p_real = NP.array([0.5,200.0])
         return p_real
+
+    # Choose the real value of the time-varing parameters
+    def tv_p_real_now(current_time):
+        tv_p_real = NP.array([1.0,1.0])
+        return tv_p_real
+
 
     """
     --------------------------------------------------------------------------
@@ -71,7 +77,10 @@ def simulator(model):
     """
 
     simulator_dict = {'integration_tool':integration_tool,'plot_states':plot_states,
-    'plot_control': plot_control,'plot_anim': plot_anim,'export_to_matlab': export_to_matlab,'export_name': export_name, 'p_real_now':p_real_now, 't_step_simulator': t_step_simulator, 'integrator_opts': opts}
+    'plot_control': plot_control,'plot_anim': plot_anim,
+    'export_to_matlab': export_to_matlab,'export_name': export_name,
+    'p_real_now':p_real_now, 't_step_simulator': t_step_simulator,
+    'integrator_opts': opts, 'tv_p_real_now':tv_p_real_now}
 
     simulator_1 = core_do_mpc.simulator(model, simulator_dict)
 
