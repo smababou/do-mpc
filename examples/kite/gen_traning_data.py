@@ -24,7 +24,7 @@ import data_do_mpc
 import pdb
 
 # number of batches to generate data from
-n_batches = 3
+n_batches = 100
 offset = 0
 # initialize the problem (first lines of do_mpc.py)
 
@@ -147,7 +147,7 @@ for i in range(offset, offset + n_batches):
 
         # Set initial condition constraint for the next iteration
         configuration_1.prepare_next_iter()
-        print("--- Batch number ---" + str(i))# + "=== T_ref ==== " + str(T_ref) + " ===")
+        print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
     # Export data
     data_do_mpc.plot_mpc(configuration_1)
     data_do_mpc.export_for_learning(configuration_1, "data/2_uncertainties/data_batch_" + str(i))

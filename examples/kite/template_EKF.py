@@ -34,7 +34,7 @@ def observer(model):
     """
 
     method = 'EKF'
-    open_loop = False
+    open_loop = True
     t_step = 0.05 # Sampling time
     parameter_estimation = True
 
@@ -54,7 +54,7 @@ def observer(model):
     if parameter_estimation:
         x_init = NP.array([theta_0, phi_0, psi_0, E_0, v_0])
         P = NP.diag([0.01,0.01,0.01,0.1,0.2])
-        Q = NP.diag([0.001,0.001,0.2,0.1,3.0])
+        Q = NP.diag([0.001,0.001,0.05,0.1,3.0])
     else:
         x_init = NP.array([theta_0, phi_0, psi_0])
         P = NP.diag([0.001,0.001,0.001])

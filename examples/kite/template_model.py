@@ -44,8 +44,7 @@ def model():
     template_model: define uncertain parameters, states and controls as symbols
     --------------------------------------------------------------------------
     """
-    # Define the uncertainties as CasADi symbols
-
+    # Define the uncertainties as CasADi symbol05
     E_0   = SX.sym("E_0")
     # c_tilde  = SX.sym("c_tilde")
     v_0 = SX.sym("v_0")
@@ -116,7 +115,7 @@ def model():
     # Bounds on the states. Use "inf" for unconstrained states
     theta_lb = 0.0;			  theta_ub = 0.5*pi
     phi_lb = -0.5*pi;		      phi_ub = 0.5*pi
-    psi_lb = -5.0*pi;		  psi_ub = 5.0*pi
+    psi_lb = -1.0*pi;		  psi_ub = 1.0*pi
     x_lb = NP.array([theta_lb, phi_lb, psi_lb])
     x_ub = NP.array([theta_ub, phi_ub, psi_ub])
 
@@ -143,7 +142,7 @@ def model():
     # Activate if the nonlinear constraints should be implemented as soft constraints
     soft_constraint = 1
     # l1 - Penalty term to add in the cost function for the constraints (it should be the same size as cons)
-    penalty_term_cons = NP.array([1e4])
+    penalty_term_cons = NP.array([1e3])
     # Maximum violation for the upper and lower bounds
     maximum_violation = NP.array([10.0])
 
@@ -161,11 +160,11 @@ def model():
     """
     # Define the cost function
     # Lagrange term
-    lterm =  -T_F
+    lterm =  -T_F/1e4
     # Mayer term
-    mterm =  -T_F
+    mterm =  -T_F/1e4
     # Penalty term for the control movements
-    rterm = NP.array([0.0])
+    rterm = NP.array([0.5])
 
 
 

@@ -40,9 +40,9 @@ def optimizer(model):
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
     open_loop = 0
     # Sampling time
-    t_step = 0.15
+    t_step = 0.3
     # Simulation time
-    t_end = 80.0
+    t_end = 60.0
     # Choose type of state discretization (collocation or multiple-shooting)
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5
@@ -50,7 +50,7 @@ def optimizer(model):
     # Collocation points: 'legendre' or 'radau'
     collocation = 'radau'
     # Number of finite elements per control interval
-    n_fin_elem = 2
+    n_fin_elem = 1
     # NLP Solver and linear solver
     nlp_solver = 'ipopt'
     qp_solver = 'qpoases'
@@ -72,7 +72,7 @@ def optimizer(model):
     # Define the different possible values of the uncertain parameters in the scenario tree
     E_0_values = NP.array([4.0,6.0])
     c_tilde_values = NP.array([0.005,0.04])
-    v_0_values = NP.array([6.9,13.1])
+    v_0_values = NP.array([7.0,13.0])
 
     uncertainty_values = NP.array([E_0_values,v_0_values])
     # Parameteres of the NLP which may vary along the time (For example a set point that varies at a given time)
@@ -87,7 +87,7 @@ def optimizer(model):
     # Only necessary if time-varying paramters defined in the model
     # The length of the vector for each parameter should be the prediction horizon
     # The vectos for each parameter might chance at each sampling time
-    number_steps = (int(t_end/t_step) + 1)*5
+    number_steps = (int(t_end/t_step) + 1)*7
     # Number of time-varying parameters
     n_tv_p = 2
     tv_p_values = NP.resize(NP.array([]),(number_steps,n_tv_p,n_horizon))

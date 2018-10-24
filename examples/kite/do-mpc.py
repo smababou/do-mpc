@@ -29,6 +29,10 @@ sys.path.insert(0,path_do_mpc+'code')
 # Do not write bytecode to maintain clean directories
 sys.dont_write_bytecode = True
 
+# Import keras to load trained models
+# import keras
+# from keras.models import model_from_json
+
 # Start CasADi
 from casadi import *
 # Import do-mpc core functionalities
@@ -64,6 +68,23 @@ configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, si
 # Set up the solvers
 configuration_1.setup_solver()
 configuration_1.simulator.p_real_batch = NP.zeros([2])
+# configuration_1.observer.observed_states = configuration_1.model.ocp.x0
+# configuration_1.make_step_optimizer()
+
+# """
+# -----------------------------------------------
+# Load neural network
+# -----------------------------------------------
+# """
+#
+# filename = 'controller_0'
+# json_file = open(filename+'.json', 'r')
+# loaded_model_json = json_file.read()
+# json_file.close()
+# loaded_model = model_from_json(loaded_model_json)
+# # load weights into new model
+# loaded_model.load_weights(filename+".h5")
+# print("Loaded model from disk")
 
 """
 ----------------------------
@@ -87,8 +108,8 @@ configuration_1.simulator.p_real_batch[0] = E_batch
 # configuration_1.simulator.p_real_batch[1] = c_batch
 configuration_1.simulator.p_real_batch[-1] = w_init
 
-configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.1)
-configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.2)
+configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
+configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
 
 configuration_1.mpc_data.mpc_parameters[0,:] = configuration_1.simulator.p_real_batch
 configuration_1.mpc_data.mpc_parameters_est[0,:] = configuration_1.observer.ekf.x_hat[3:]
@@ -108,6 +129,15 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     """
     # Make one optimizer step (solve the NLP)
     configuration_1.make_step_optimizer()
+    # u_lb = NP.array([-10.0])
+    # u_ub = NP.array([10.0])
+    # x_lb = NP.array([0.3, -1.2,-3.1])
+    # x_ub = NP.array([0.9, 1.1, 3.4])
+    # x_in_scaled = NP.atleast_2d((configuration_1.observer.observed_states - x_lb) / (x_ub - x_lb))
+    # u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
+    # u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
+    # u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
+    # configuration_1.optimizer.u_mpc = u_opt
 
     """
     ----------------------------
@@ -135,7 +165,7 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
 
     # Set initial condition constraint for the next iteration
     configuration_1.prepare_next_iter()
-
+    print("--- T = " + str(t0_sim) + "s/" + str(configuration_1.optimizer.t_end) + "s ---")
     """
     ------------------------------------------------------
     do-mpc: Plot MPC animation if chosen by the user

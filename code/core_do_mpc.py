@@ -225,7 +225,10 @@ class configuration:
         opts["expand"] = True
         opts["ipopt.linear_solver"] = self.optimizer.linear_solver
         #NOTE: this could be passed as parameters of the optimizer class
-        opts["ipopt.max_iter"] = 500
+        opts["ipopt.max_iter"] = 1000
+        opts["ipopt.ma27_la_init_factor"] = 50.0
+        opts["ipopt.ma27_liw_init_factor"] = 50.0
+        opts["ipopt.ma27_meminc_factor"] = 10.0
         opts["ipopt.tol"] = 1e-6
         # Setup the solver
         solver = nlpsol("solver", self.optimizer.nlp_solver, nlp_dict_out['nlp_fcn'], opts)
@@ -319,9 +322,11 @@ class configuration:
         self.optimizer.arg['p'] = param
 
     def store_mpc_data(self):
+        nx = self.model.x.size(1)
         mpc_iteration = self.simulator.mpc_iteration - 1 #Because already increased in the simulator
         data = self.mpc_data
         data.mpc_states = NP.append(data.mpc_states, [self.simulator.xf_sim], axis = 0)
+        data.mpc_states_est = NP.append(data.mpc_states_est, NP.reshape(self.observer.ekf.x_hat[:nx],(1,-1)),axis = 0) # NOTE: added for learning
         data.mpc_control = NP.append(data.mpc_control, [self.optimizer.u_mpc], axis = 0)
         #data.mpc_alg = NP.append(data.mpc_alg, [NP.zeros(NP.size(self.model.z))], axis = 0) # TODO: To be completed for DAEs
         data.mpc_time = NP.append(data.mpc_time, [[self.simulator.t0_sim]], axis = 0)
@@ -329,7 +334,9 @@ class configuration:
         #data.mpc_ref = NP.append(data.mpc_ref, [[0]], axis = 0) # TODO: To be completed
         stats = self.optimizer.solver.stats()
         data.mpc_cpu = NP.append(data.mpc_cpu, [[stats['t_wall_solver']]], axis = 0)
-        data.mpc_parameters = NP.append(data.mpc_parameters, [self.simulator.p_real_now(self.simulator.t0_sim)], axis = 0)
+        # data.mpc_parameters = NP.append(data.mpc_parameters, [self.simulator.p_real_now(self.simulator.t0_sim)], axis = 0)
+        data.mpc_parameters = NP.append(data.mpc_parameters, NP.reshape(self.simulator.p_real_batch,(1,-1)), axis = 0)
+        data.mpc_parameters_est = NP.append(data.mpc_parameters_est, NP.reshape(self.observer.ekf.x_hat[nx:],(1,-1)), axis = 0)
 
 
     def store_est_data(self):
@@ -338,7 +345,7 @@ class configuration:
         nx = self.model.x.size(1)
         np = self.model.p.size(1)
         if self.observer.method == "EKF":
-            x = self.observer.ekf.x_hat
+            x = NP.copy(self.observer.ekf.x_hat)
             if self.observer.param_est:
                 p = NP.reshape(x[nx:],(1,-1))
         elif self.observer.method == "MHE":

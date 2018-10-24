@@ -46,6 +46,7 @@ class mpc_data:
         t_step = configuration.simulator.t_step_simulator
         # Initialize the data structures
         self.mpc_states = NP.resize(NP.array([]),(1 ,nx))
+        self.mpc_states_est = NP.resize(NP.array([]),(1 ,nx)) # NOTE: added for learning
         self.mpc_control = NP.resize(NP.array([]),(1 ,nu))
         self.mpc_alg = NP.resize(NP.array([]),(1, nz))
         self.mpc_time = NP.resize(NP.array([]),(1, 1))
@@ -53,8 +54,10 @@ class mpc_data:
         self.mpc_ref = NP.resize(NP.array([]),(1, 1))
         self.mpc_cpu = NP.resize(NP.array([]),(1, 1))
         self.mpc_parameters = NP.resize(NP.array([]),(1, np))
+        self.mpc_parameters_est = NP.resize(NP.array([]),(1, np))
         # Initialize with initial conditions
         self.mpc_states[0,:] = configuration.model.ocp.x0 / configuration.model.ocp.x_scaling
+        self.mpc_states_est[0,:] = configuration.model.ocp.x0 / configuration.model.ocp.x_scaling # NOTE: added for learning
         self.mpc_control[0,:] = configuration.model.ocp.u0 / configuration.model.ocp.u_scaling
         self.mpc_time[0] = 0
         if not configuration.observer.method == "state-feedback":
@@ -95,6 +98,26 @@ def export_to_matlab(configuration):
         }
         scipy.io.savemat(export_name, mdict=export_dict)
         print("Exporting to Matlab as ''" + export_name + "''")
+
+
+def export_for_learning(configuration, name):
+    if configuration.simulator.export_to_matlab:
+        data = configuration.mpc_data
+        export_name = name
+        time = data.mpc_time
+        states = data.mpc_states
+        states_est = data.mpc_states_est
+        controls = data.mpc_control
+        params = data.mpc_parameters
+        params_est = data.mpc_parameters_est
+        aux = NP.append(time,states, axis = 1)
+        aux_est = NP.append(aux,states_est, axis=1)
+        aux2 = NP.append(aux_est,controls, axis = 1)
+        aux3 = NP.append(aux2,params, axis = 1)
+        mpc_data_for_learning = NP.append(aux3,params_est, axis = 1)
+        NP.save(export_name,mpc_data_for_learning)
+        print("Exporting data for learning as ''" + export_name + "''")
+
 
 def plot_mpc(configuration):
     """ This function plots the states and controls chosen in the variables plot_states and plot_control until a certain index (index_mpc) """
