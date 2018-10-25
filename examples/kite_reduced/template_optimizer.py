@@ -24,6 +24,7 @@
 from casadi import *
 import numpy as NP
 import core_do_mpc
+import pdb
 
 def optimizer(model):
 
@@ -40,9 +41,9 @@ def optimizer(model):
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
     open_loop = 0
     # Sampling time
-    t_step = 0.15
+    t_step = 0.05
     # Simulation time
-    t_end = 20.0
+    t_end = 50.0
     # Choose type of state discretization (collocation or multiple-shooting)
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5
@@ -73,11 +74,9 @@ def optimizer(model):
     # E_0_values = NP.array([3.0,7.0])
     # c_tilde_values = NP.array([0.005,0.04])
     v_0_values = NP.array([7.0,13.0])
-    # E_0_values = NP.array([2.8,7.2])
-    # c_tilde_values = NP.array([0.003,0.042])
-    # v_0_values = NP.array([4.8,15.2])
+    # delta_psi_values = NP.array([-0.02,0.02])
 
-    uncertainty_values = NP.array([v_0_values])
+    uncertainty_values = NP.array([v_0_values])#,delta_psi_values])
     # Parameteres of the NLP which may vary along the time (For example a set point that varies at a given time)
     set_point = SX.sym('set_point')
     parameters_nlp = NP.array([set_point])

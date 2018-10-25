@@ -76,7 +76,7 @@ Load neural network
 -----------------------------------------------
 """
 
-filename = 'controller_0'
+filename = 'controller_1'
 json_file = open(filename+'.json', 'r')
 loaded_model_json = json_file.read()
 json_file.close()
@@ -95,6 +95,7 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     v_0_real = 10
     v_real = v_0_real + 5*sin(2*pi*0.1*t0_sim)
     configuration_1.simulator.p_real_batch = NP.array([v_real])
+    
     """
     ----------------------------
     do-mpc: Optimizer
@@ -105,12 +106,12 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     u_lb = NP.array([-10.0])
     u_ub = NP.array([10.0])
     x_lb = NP.array([0.2, -1.1,-3.0])
-    x_ub = NP.array([0.8, 1.1, 3.3])
+    x_ub = NP.array([0.8, 1.1, 3.0])
     x_in_scaled = NP.atleast_2d((configuration_1.observer.observed_states - x_lb) / (x_ub - x_lb))
     u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
     u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
     u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
-    configuration_1.optimizer.u_mpc = u_opt_lim
+    configuration_1.optimizer.u_mpc = u_opt
 
     """
     ----------------------------

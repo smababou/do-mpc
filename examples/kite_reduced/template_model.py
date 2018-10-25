@@ -39,6 +39,7 @@ def model():
     beta = 0
     E_0 = 5.0
     c_tilde = 0.028
+    # t_step = 0.15
 
     """
     --------------------------------------------------------------------------
@@ -50,6 +51,7 @@ def model():
     # E_0   = SX.sym("E_0")
     # c_tilde  = SX.sym("c_tilde")
     v_0 = SX.sym("v_0")
+    #delta_psi = SX.sym("delta_psi")
 
     # Define the differential states as CasADi symbols
 
@@ -84,7 +86,7 @@ def model():
 
     dtheta  = v_a / L_tether * (cos(psi) - tan(theta)/E)
     dphi    = -v_a / (L_tether * sin(theta)) * sin(psi)
-    dpsi    = v_a/L_tether * u_tilde + dphi *(cos(theta))
+    dpsi    = (v_a/L_tether * u_tilde + dphi *(cos(theta)))# + delta_psi/t_step
 
     # Concatenate differential states, algebraic states, control inputs and right-hand-sides
 
@@ -141,7 +143,7 @@ def model():
     cons_ub = NP.array(-h_min)
 
     # Activate if the nonlinear constraints should be implemented as soft constraints
-    soft_constraint = 0
+    soft_constraint = 1
     # l1 - Penalty term to add in the cost function for the constraints (it should be the same size as cons)
     penalty_term_cons = NP.array([1e4])
     # Maximum violation for the upper and lower bounds

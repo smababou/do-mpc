@@ -52,7 +52,7 @@ def observer(model):
     if parameter_estimation:
         x_init = NP.array([theta_0, phi_0, psi_0, v_0])
         P = NP.diag([0.001,0.001,0.01,0.1])
-        Q = NP.diag([0.01,0.01,5.0,2000.0])
+        Q = NP.diag([0.01,0.01,5.0,100.0])
     else:
         x_init = NP.array([theta_0, phi_0, psi_0])
         P = NP.diag([0.001,0.001,0.001])
