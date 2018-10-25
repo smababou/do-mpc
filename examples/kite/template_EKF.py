@@ -34,7 +34,7 @@ def observer(model):
     """
 
     method = 'EKF'
-    open_loop = True
+    open_loop = False
     t_step = 0.05 # Sampling time
     parameter_estimation = True
 
