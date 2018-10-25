@@ -21,11 +21,15 @@ from casadi import *
 import core_do_mpc
 # Import do-mpc plotting and data managament functions
 import data_do_mpc
+# Import function to make projection
+from projection_do_mpc import make_projection
 import pdb
 
 # number of batches to generate data from
-n_batches = 20
-offset = 30
+n_batches = 10
+offset = 0
+controller_number = 1
+neural_network = True # NOTE: if false MPC instead of NN
 # initialize the problem (first lines of do_mpc.py)
 
 """
@@ -45,15 +49,15 @@ import template_simulator
 Load neural network
 -----------------------------------------------
 """
-
-filename = 'controller_0'
-json_file = open(filename+'.json', 'r')
-loaded_model_json = json_file.read()
-json_file.close()
-loaded_model = model_from_json(loaded_model_json)
-# load weights into new model
-loaded_model.load_weights(filename+".h5")
-print("Loaded model from disk")
+if neural_network:
+    filename = 'controller_' + str(controller_number)
+    json_file = open(filename+'.json', 'r')
+    loaded_model_json = json_file.read()
+    json_file.close()
+    loaded_model = model_from_json(loaded_model_json)
+    # load weights into new model
+    loaded_model.load_weights(filename+".h5")
+    print("Loaded model from disk")
 
 for i in range(offset, offset + n_batches):
 
@@ -71,7 +75,8 @@ for i in range(offset, offset + n_batches):
     # Set up the solvers
     configuration_1.observer.observed_states = configuration_1.model.ocp.x0
     configuration_1.setup_solver()
-    configuration_1.make_step_optimizer()
+    if neural_network:
+        configuration_1.make_step_optimizer()
     configuration_1.simulator.p_real_batch = NP.zeros([2])
 
     # The initial states for the batches are:
@@ -126,19 +131,23 @@ for i in range(offset, offset + n_batches):
         configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
 
         # Make one optimizer step (solve the NLP)
-        # configuration_1.make_step_optimizer()
-        u_lb = NP.array([-10.0])
-        u_ub = NP.array([10.0])
-        x_lb = NP.array([0.15, -1.25,-3.3])
-        x_ub = NP.array([1.0, 1.3, 3.3])
-        x_in_scaled = NP.atleast_2d(((configuration_1.observer.observed_states) - x_lb) / (x_ub - x_lb))
-        u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
-        u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
-        u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
-        configuration_1.optimizer.u_mpc = (u_opt_lim)
+        if not neural_network:
+            configuration_1.make_step_optimizer()
+        else:
+            u_lb = NP.array([-10.0])
+            u_ub = NP.array([10.0])
+            x_lb = NP.array([0.15, -1.25,-3.3])
+            x_ub = NP.array([1.0, 1.3, 3.3])
+            x_in_scaled = NP.atleast_2d(((configuration_1.observer.observed_states) - x_lb) / (x_ub - x_lb))
+            u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
+            u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
+            u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
+            configuration_1.optimizer.u_mpc = (u_opt_lim)
 
         # Simulate the system one step using the solution obtained in the optimization
         # configuration_1.make_step_simulator() # NOTE: included in step_observer
+        # projection when constraint violated or will be violated
+        make_projection(configuration_1)
 
         # Make one observer step
         configuration_1.make_step_observer()
