@@ -27,6 +27,7 @@ import observer_do_mpc
 from casadi import *
 from casadi.tools import *
 import data_do_mpc
+import projection_do_mpc
 import numpy as NP
 from scipy.linalg import expm
 import pdb
@@ -212,10 +213,14 @@ class configuration:
         self.optimizer = optimizer
         self.observer = observer
         self.simulator = simulator
+        self.projector = projection_do_mpc.projector(self)
         # The data structure
         self.mpc_data = data_do_mpc.mpc_data(self)
         # The solver
         self.setup_solver()
+
+    def make_step_projection(self):
+        projection_do_mpc.make_step_projection(self)
 
     def setup_solver(self):
         # Call setup_nlp to generate the NLP
@@ -327,7 +332,10 @@ class configuration:
         data = self.mpc_data
         data.mpc_states = NP.append(data.mpc_states, [self.simulator.xf_sim], axis = 0)
         data.mpc_states_est = NP.append(data.mpc_states_est, NP.reshape(self.observer.ekf.x_hat[:nx],(1,-1)),axis = 0) # NOTE: added for learning
-        data.mpc_control = NP.append(data.mpc_control, [self.optimizer.u_mpc], axis = 0)
+        if self.projector.flaaaag:
+            pdb.set_trace()
+            self.projector.flaaaag = False
+        data.mpc_control = NP.append(data.mpc_control, NP.reshape(self.optimizer.u_mpc,(1,-1)), axis = 0)
         #data.mpc_alg = NP.append(data.mpc_alg, [NP.zeros(NP.size(self.model.z))], axis = 0) # TODO: To be completed for DAEs
         data.mpc_time = NP.append(data.mpc_time, [[self.simulator.t0_sim]], axis = 0)
         data.mpc_cost = NP.append(data.mpc_cost, self.optimizer.opt_result_step.optimal_cost, axis = 0)
