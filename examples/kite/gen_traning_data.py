@@ -21,12 +21,10 @@ from casadi import *
 import core_do_mpc
 # Import do-mpc plotting and data managament functions
 import data_do_mpc
-# Import function to make projection
-from projection_do_mpc import make_projection
 import pdb
 
 # number of batches to generate data from
-n_batches = 10
+n_batches = 5
 offset = 0
 controller_number = 1
 neural_network = True # NOTE: if false MPC instead of NN
@@ -146,13 +144,16 @@ for i in range(offset, offset + n_batches):
 
         # Simulate the system one step using the solution obtained in the optimization
         # configuration_1.make_step_simulator() # NOTE: included in step_observer
-        # projection when constraint violated or will be violated
-        make_projection(configuration_1)
+
+        # projection when constraint probaby will be violated
+        configuration_1.make_step_projection()
 
         # Make one observer step
         configuration_1.make_step_observer()
 
         # Store the information
+        if configuration_1.projector.flaaaag:
+            pdb.set_trace()
         configuration_1.store_mpc_data()
 
         # Set initial condition constraint for the next iteration

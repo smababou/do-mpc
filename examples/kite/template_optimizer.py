@@ -40,9 +40,9 @@ def optimizer(model):
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
     open_loop = 0
     # Sampling time
-    t_step = 0.3
+    t_step = 0.05
     # Simulation time
-    t_end = 60.0
+    t_end = 70.0
     # Choose type of state discretization (collocation or multiple-shooting)
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5

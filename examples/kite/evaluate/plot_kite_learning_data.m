@@ -7,9 +7,9 @@ nt = 1;
 nx = 3;
 np = 2;
 
-offset = 0;
+offset = 1;
 n_batches = 1;
-path_to_data = '../data/2_uncertainties/data_batch_';
+path_to_data = '../data/2_uncertainties_NN/data_batch_';
 % path_to_data = '../data/data_batch_';
 
 % violationsl

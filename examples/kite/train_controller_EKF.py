@@ -29,7 +29,7 @@ nu = 1
 np = 2
 nt = 1
 
-n_layers = 4
+n_layers = 6
 n_neurons = 10
 act = 'tanh'
 output_act = 'linear'
@@ -46,7 +46,7 @@ for i in range(n_batches_train_test_1):
     # remove the offset of one position in the state-control vector
     states.append(raw_data[i][0:-1,nt+nx:nt+2*nx])
     controls.append(raw_data[i][1:,nt+2*nx:nt+2*nx+nu])
-
+    
 # training data
 x_train_1 = NP.vstack(states[0:n_batches_train_1])
 # x_train_2 = NP.vstack(states[n_batches_train_test_1:n_batches_train_test_1+n_batches_train_2])
@@ -91,7 +91,7 @@ main_output = Dense(nu, activation = output_act, kernel_regularizer=regularizers
 
 model = Model(inputs = main_input, outputs = main_output)
 model.compile(loss='mse',optimizer='adam')
-model.fit(x_train_1, y_train_1,epochs=500,batch_size=25)
+model.fit(x_train_1, y_train_1,epochs=500,batch_size=100)
 pdb.set_trace()
 score = model.evaluate(x_test_1, y_test_1, batch_size=128)
 print("The test score is: ")
