@@ -68,6 +68,7 @@ class projector:
 
         # optimization variable
         u_hat = SX.sym("u_hat",nu,1)
+        eps = SX.sym("eps",4,1)
 
         # objective
         # x0 = x_eul_fun(XK,u_hat,PK)
@@ -85,29 +86,63 @@ class projector:
                 x_mean = x_sym + self.delta_t/self.ems * rhs_fun(x_sym,u_sym,p_sym) + mtimes(self.A_tilde(x_sym,u_sym,p_sym),x_mean-x_sym) + mtimes(self.B_tilde(x_sym,u_sym,p_sym),u_hat-u_sym)
         self.x_pred_lin = Function("x_pred_lin",[x_sym,u_sym,p_sym,u_hat],[x_mean])
 
-        x_new = self.x_pred_lin(XK,UK,PK,u_hat)
+        x_new_1 = self.x_pred_lin(XK,UK,NP.array([4.0,7.0]),u_hat)
+        x_new_2 = self.x_pred_lin(XK,UK,NP.array([4.0,13.0]),u_hat)
+        x_new_3 = self.x_pred_lin(XK,UK,NP.array([6.0,7.0]),u_hat)
+        x_new_4 = self.x_pred_lin(XK,UK,NP.array([6.0,13.0]),u_hat)
 
         # objective
-        J = 1e0*(UK - u_hat)**2 + 1e4*(100.0 - self.con_fun(x_new))**2
+        # J = 1e0*(UK - u_hat)**2 + 1e4*(100.0 - self.con_fun(x_new))**2
+        w_soft = 1e3
+        J = (UK - u_hat)**2 + w_soft*(eps[0,0])**2 + w_soft*(eps[1,0])**2 + w_soft*(eps[2,0])**2 + w_soft*(eps[3,0])**2
 
         # constraints
+        h1 = self.con_fun(x_new_1)
+        h2 = self.con_fun(x_new_2)
+        h3 = self.con_fun(x_new_3)
+        h4 = self.con_fun(x_new_4)
+
         g = []
-        # g.append(self.con_fun(x_new))
-        g.append(x_new)
+        g.append(x_new_1)
+        g.append(x_new_2)
+        g.append(x_new_3)
+        g.append(x_new_4)
+        g.append(h1+eps[0,0])
+        g.append(h2+eps[1,0])
+        g.append(h3+eps[2,0])
+        g.append(h4+eps[3,0])
+        g.append(eps[0,0])
+        g.append(eps[1,0])
+        g.append(eps[2,0])
+        g.append(eps[3,0])
         g = vertcat(*g)
 
         lbg = []
-        # lbg.append(100.0)
         lbg.append(NP.array([0.0,-0.5*pi,-1.0*pi]))
+        lbg.append(NP.array([0.0,-0.5*pi,-1.0*pi]))
+        lbg.append(NP.array([0.0,-0.5*pi,-1.0*pi]))
+        lbg.append(NP.array([0.0,-0.5*pi,-1.0*pi]))
+        lbg.append(100.0)
+        lbg.append(100.0)
+        lbg.append(100.0)
+        lbg.append(100.0)
+        lbg.append(NP.ones([4,1])*0.0)
         self.lbg = vertcat(*lbg)
 
         ubg = []
-        # ubg.append(500.0)
         ubg.append(NP.array([0.5*pi,0.5*pi,1.0*pi]))
+        ubg.append(NP.array([0.5*pi,0.5*pi,1.0*pi]))
+        ubg.append(NP.array([0.5*pi,0.5*pi,1.0*pi]))
+        ubg.append(NP.array([0.5*pi,0.5*pi,1.0*pi]))
+        ubg.append(inf)
+        ubg.append(inf)
+        ubg.append(inf)
+        ubg.append(inf)
+        ubg.append(NP.ones([4,1])*inf)
         self.ubg = vertcat(*ubg)
 
         # bliblablubb
-        nlp_fcn = {'f': J, 'x': u_hat, 'p': param_proj, 'g': g}
+        nlp_fcn = {'f': J, 'x': vertcat(u_hat,eps), 'p': param_proj, 'g': g}
 
         # setup solver
         self.solver = nlpsol("solver", 'ipopt', nlp_fcn, opts)
@@ -135,18 +170,26 @@ def make_step_projection(conf):
     # pk = NP.copy(conf.observer.ekf.x_hat[nx:])
 
     # predict state
-    xp = proj.x_pred(xk,uk,pk)
+    xp1 = proj.x_pred(xk,uk,NP.array([4.0,7.0]))
+    xp2 = proj.x_pred(xk,uk,NP.array([4.0,13.0]))
+    xp3 = proj.x_pred(xk,uk,NP.array([6.0,7.0]))
+    xp4 = proj.x_pred(xk,uk,NP.array([6.0,13.0]))
 
-    if proj.con_fun(xp) < 100.0:
+    con1 = proj.con_fun(xp1)
+    con2 = proj.con_fun(xp2)
+    con3 = proj.con_fun(xp3)
+    con4 = proj.con_fun(xp4)
+
+    if  (con1<100.0) or (con2<100.0) or (con3<100.0) or (con4<100.0):
         param_k = proj.param(0)
         param_k["uk"] = uk
         param_k["xk"] = xk
         param_k["pk"] = pk
-        result = proj.solver(x0=uk, lbx=-10.0, ubx=10.0, lbg=proj.lbg, ubg=proj.ubg, p=param_k)
+        result = proj.solver(x0=vertcat(uk,NP.ones([4,1])), lbx=-10.0, ubx=10.0, lbg=proj.lbg, ubg=proj.ubg, p=param_k)
         u_opt = result["x"]
         # pdb.set_trace()
         # proj.flaaaag = True
-        conf.optimizer.u_mpc = NP.reshape(u_opt,(1,-1))
+        conf.optimizer.u_mpc = NP.reshape(u_opt[0],(1,-1))
 
         # conf.make_step_simulator()
         # print(conf.simulator.xf_sim)
