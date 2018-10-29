@@ -74,6 +74,7 @@ for i in range(offset, offset + n_batches):
     model_1 = template_model.model()
     # Create an optimizer object based on the template and a model
     optimizer_1 = template_optimizer.optimizer(model_1)
+    optimizer_1.t_step = 0.15
     # Create an observer object based on the template and a model
     observer_1 = template_EKF.observer(model_1)
     # Create a simulator object based on the template and a model
@@ -173,6 +174,7 @@ for i in range(offset, offset + n_batches):
     model_1 = template_model.model()
     # Create an optimizer object based on the template and a model
     optimizer_1 = template_optimizer.optimizer(model_1)
+    optimizer_1.t_step = 0.05
     # Create an observer object based on the template and a model
     observer_1 = template_EKF.observer(model_1)
     # Create a simulator object based on the template and a model
