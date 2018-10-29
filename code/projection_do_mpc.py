@@ -65,6 +65,9 @@ class projector:
         PK = param_proj["pk"]
 
         self.param = param_proj
+        x_sym_new = SX.sym("x_sym_new",3,1)
+        con_lin = self.con_fun(x_sym) + mtimes(jacobian(con,x_sym),x_sym_new - x_sym)
+        self.con_lin_fun = Function("con_lin_fun",[x_sym_new,x_sym],[con_lin])
 
         # optimization variable
         u_hat = SX.sym("u_hat",nu,1)
@@ -91,16 +94,26 @@ class projector:
         x_new_3 = self.x_pred_lin(XK,UK,NP.array([6.0,7.0]),u_hat)
         x_new_4 = self.x_pred_lin(XK,UK,NP.array([6.0,13.0]),u_hat)
 
+        x_pred_1 = self.x_pred_lin(XK,UK,NP.array([4.0,7.0]),UK)
+        x_pred_2 = self.x_pred_lin(XK,UK,NP.array([4.0,13.0]),UK)
+        x_pred_3 = self.x_pred_lin(XK,UK,NP.array([6.0,7.0]),UK)
+        x_pred_4 = self.x_pred_lin(XK,UK,NP.array([6.0,13.0]),UK)
+
         # objective
         # J = 1e0*(UK - u_hat)**2 + 1e4*(100.0 - self.con_fun(x_new))**2
         w_soft = 1e3
         J = (UK - u_hat)**2 + w_soft*(eps[0,0])**2 + w_soft*(eps[1,0])**2 + w_soft*(eps[2,0])**2 + w_soft*(eps[3,0])**2
 
         # constraints
-        h1 = self.con_fun(x_new_1)
-        h2 = self.con_fun(x_new_2)
-        h3 = self.con_fun(x_new_3)
-        h4 = self.con_fun(x_new_4)
+        # h1 = self.con_fun(x_new_1)
+        # h2 = self.con_fun(x_new_2)
+        # h3 = self.con_fun(x_new_3)
+        # h4 = self.con_fun(x_new_4)
+
+        h1 = self.con_lin_fun(x_new_1, x_pred_1)
+        h2 = self.con_lin_fun(x_new_2, x_pred_2)
+        h3 = self.con_lin_fun(x_new_3, x_pred_3)
+        h4 = self.con_lin_fun(x_new_4, x_pred_4)
 
         g = []
         g.append(x_new_1)
