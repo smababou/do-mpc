@@ -10,8 +10,8 @@ plt.rcParams.update({'font.size': 12, 'lines.linewidth' : 2.0,'svg.fonttype': 'n
 # parameters
 path_to_data = 'results/'
 # path_to_data = '../data'
-offset = 0
-n_batches = 5
+offset = 50
+n_batches = 50
 
 # sizes
 nx = 3
@@ -27,11 +27,11 @@ constraint = NP.sinh(h_min/(NP.cos(c_plot)*L_tether))*360/(2*pi)
 
 # load data
 data_MPC = []
-for i in range(n_batches):
+for i in range(offset, offset + n_batches):
     data_MPC.append(NP.load(path_to_data + "data_batch_MPC_" + str(i) + ".npy"))
 
 data_NN = []
-for i in range(n_batches):
+for i in range(offset, offset + n_batches):
     data_NN.append(NP.load(path_to_data + "data_batch_NN_" + str(i) + ".npy"))
 
 # start plotting
@@ -74,14 +74,14 @@ for i in range(n_batches):
     # plt.plot(t,x_r_MPC[:,2],label='MPC')
     # plt.plot(t,x_r_NN[:,2],label='NN')
 
-    f, (ax1,ax2,ax3) = plt.subplots(nx, sharex=True)
-    ax1.plot(t_MPC,x_r_MPC[:,0])
-    ax1.plot(t_NN,x_r_NN[:,0])
-    ax2.plot(t_MPC,x_r_MPC[:,1])
-    ax2.plot(t_NN,x_r_NN[:,1])
-    ax3.plot(t_MPC,x_r_MPC[:,2],label='MPC')
-    ax3.plot(t_NN,x_r_NN[:,2],label='NN')
-    ax3.legend()
+    # f, (ax1,ax2,ax3) = plt.subplots(nx, sharex=True)
+    # ax1.plot(t_MPC,x_r_MPC[:,0])
+    # ax1.plot(t_NN,x_r_NN[:,0])
+    # ax2.plot(t_MPC,x_r_MPC[:,1])
+    # ax2.plot(t_NN,x_r_NN[:,1])
+    # ax3.plot(t_MPC,x_r_MPC[:,2],label='MPC')
+    # ax3.plot(t_NN,x_r_NN[:,2],label='NN')
+    # ax3.legend()
 
     # plt.figure()
     # plt.subplot(np,1,1)
@@ -91,10 +91,10 @@ for i in range(n_batches):
     # plt.plot(t,p_r[:,1])
     # plt.plot(t,p_e[:,1])
 
-    fig, ax = plt.subplots()
-    ax.plot(t_MPC,u_MPC[:,0],label='MPC')
-    ax.plot(t_NN,u_NN[:,0],label='NN')
-    ax.legend()
+    # fig, ax = plt.subplots()
+    # ax.plot(t_MPC,u_MPC[:,0],label='MPC')
+    # ax.plot(t_NN,u_NN[:,0],label='NN')
+    # ax.legend()
 
 
 
