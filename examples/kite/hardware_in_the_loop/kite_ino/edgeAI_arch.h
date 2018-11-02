@@ -24,8 +24,18 @@ const real_t *kernel_7;
 const real_t *bias_7;
 };
 
+struct edgeAI_ekf{
+const real_t *Q;
+const real_t *R;
+real_t *P;
+real_t *F;
+real_t *H;
+real_t *x_hat;
+};
+
 struct edgeAI_ctl{
 struct edgeAI_dnn *dnn;
+struct edgeAI_ekf *ekf;
 real_t *in;
 real_t *in_scaled;
 real_t *out;
