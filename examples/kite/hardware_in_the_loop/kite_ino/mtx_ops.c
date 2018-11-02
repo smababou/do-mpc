@@ -92,3 +92,30 @@ void mtx_times_mtx(real_t out[], const real_t mtx1[], const real_t mtx2[], const
 
 	return;
  }
+
+void mtx_transpose(real_t out[], const real_t mtx_in[], const uint32_t rows, const uint32_t cols)
+{
+	uint32_t i, j = 0;
+
+	for (int j = 0; j < rows; j++){
+		for (int i = 0; i < cols; i++){
+    		out[j*cols + i] = mtx_in[i*rows + j];
+		}
+	}
+
+	return;
+}
+
+void mtx_inv_2x2(real_t out[], const real_t mtx_in[])
+{
+	real_t det;
+
+	det = mtx_in[0] * mtx_in[3] - mtx_in[1] * mtx_in[2];
+
+	out[0] =  mtx_in[3]/det;
+	out[1] = -mtx_in[1]/det;
+	out[2] = -mtx_in[2]/det;
+	out[3] =  mtx_in[0]/det;
+
+	return;
+}

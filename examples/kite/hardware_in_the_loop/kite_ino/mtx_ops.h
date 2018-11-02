@@ -57,4 +57,16 @@ extern void mtx_times_mtx(
 	const uint32_t cols2
 );
 
+extern void mtx_transpose(
+	real_t out[],
+	const real_t mtx_in[],
+	const uint32_t rows,
+	const uint32_t cols
+);
+
+extern void mtx_inv_2x2(
+	real_t out[],
+	const real_t mtx_in[]
+);
+
 #endif
