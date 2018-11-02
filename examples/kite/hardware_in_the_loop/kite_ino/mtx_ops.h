@@ -48,4 +48,13 @@ extern void mtx_tanh(
 	const uint32_t rows
 	);
 
+extern void mtx_times_mtx(
+	real_t out[],
+	const real_t mtx1[],
+	const real_t mtx2[],
+	const uint32_t rows1,
+	const uint32_t rowcol,
+	const uint32_t cols2
+);
+
 #endif
