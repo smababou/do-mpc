@@ -20,7 +20,7 @@ import data_do_mpc
 import pdb
 
 # parameters
-n_split = 5
+n_split = 25
 L = 400.0
 counter_lim = 1000
 
@@ -70,6 +70,7 @@ nu = conf.model.u.shape[0]
 current_batch = NP.resize(NP.array([]),(0,nx+nu))
 counter = 0
 new_map = True
+cbab = 0
 
 for theta in theta_array:
     for phi in phi_array:
@@ -97,6 +98,8 @@ for theta in theta_array:
                         current_batch = NP.resize(NP.array([]),(0,nx+nu))
                         counter = 0
                         new_map = False
+            cbab += 1
+            print("Data batch " + str(cbab) + "/" + str(n_split**3))
 
 if new_map:
     NP.save('map_'+str(n_split),current_batch)
