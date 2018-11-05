@@ -8,77 +8,67 @@ extern "C" {
 extern struct edgeAI_ctl ctl;
 
 void setup() {
+
 	Serial.begin(9600);
 	while (!Serial);
-  Serial.setTimeout(20);
+	Serial.setTimeout(20);
 
-//	const float32_t IN0 = 0.34359907, IN1 = 0.52791537, IN2 = 0.0;
-//	ctl.in[0] = IN0;
-//	ctl.in[1] = IN1;
-//	ctl.in[2] = IN2;
-
+  // initilaze ekf
+  ctl.ekf->x_hat[0] = 0.34359907;
+  ctl.ekf->x_hat[1] = 0.52791537;
+  ctl.ekf->x_hat[2] = 0.0;
+	real_t u_mpc = 1.22835618;
+	ctl.out[0] = u_mpc;
 }
-	
+
 void loop() {
-  
-  int index = 0;
-  char theta[100];
-  char phi[100];
-  char psi[100];
 
-//  if (Serial.available() > 0) {
-//    delay(20);
-//  }
+	int index = 0;
+	char theta[100];
+	char phi[100];
+//	char psi[100];
 
-  // wait for new information
-  while (Serial.available() == 0) {
-    delay(5);
-  }
-  
-  // get data from simulation (measurements)
-  
-  while (Serial.available() > 0) {
-//      theta[index++] = Serial.read();
-      Serial.readBytes(theta,100);
-  }
-  
-  index = 0;
-  while (Serial.available() == 0) {
-    delay(5);
-  }
+	// wait for new information
+	while (Serial.available() == 0) {
+		delay(5);
+	}
 
-//  if (Serial.available() > 0) {
-//    delay(20);
-//  }
-  
-  while (Serial.available() > 0) {
-//      phi[index++] = Serial.read();
-    Serial.readBytes(phi,100);
-  }
-  
-  index = 0;
-  while (Serial.available() == 0) {
-    delay(5);
-  }
+	// get data from simulation (measurements)
 
-//  if (Serial.available() > 0) {
-//    delay(20);
-//  }
-  
-  while (Serial.available() > 0) {
-//      psi[index++] = Serial.read();
-      Serial.readBytes(psi,100);
-  }
-  
-  ctl.in[0] = (float32_t) atof(theta);
-  ctl.in[1] = (float32_t) atof(phi);
-  ctl.in[2] = (float32_t) atof(psi);
+	while (Serial.available() > 0) {
+		Serial.readBytes(theta,100);
+	}
 
-  // make optimization step
+	index = 0;
+	while (Serial.available() == 0) {
+		delay(5);
+	}
+
+	while (Serial.available() > 0) {
+		Serial.readBytes(phi,100);
+	}
+
+//	index = 0;
+//	while (Serial.available() == 0) {
+//		delay(5);
+//	}
+//
+//	while (Serial.available() > 0) {
+//		Serial.readBytes(psi,100);
+//	}
+
+	ctl.ekf->y[0] = (float32_t) atof(theta);
+	ctl.ekf->y[1] = (float32_t) atof(phi);
+//	ctl.in[2] = (float32_t) atof(psi);
+
+	// make estimation step
+	make_ekf_step(&ctl);
+
+	// make optimization step
 	make_dnn_step(&ctl);
 
-  // return optimal input
-  float print_out = (float) ctl.out[0];
+	// return optimal input (and for plotting the estimated values)
+	float print_out = (float) ctl.out[0];
 	Serial.print(print_out,4);
 
 }

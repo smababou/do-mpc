@@ -8,4 +8,12 @@ extern void make_dnn_step(
 	struct edgeAI_ctl *ctl
 	);
 
+extern void make_ekf_step(
+	struct edgeAI_ctl *ctl
+	);
+
+// extern void make_projection_step(
+// 	struct edgeAI_ctl * ctl
+// 	);
+
 #endif

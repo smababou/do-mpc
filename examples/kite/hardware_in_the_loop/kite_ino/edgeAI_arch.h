@@ -25,12 +25,15 @@ const real_t *bias_7;
 };
 
 struct edgeAI_ekf{
+const real_t *I;
 const real_t *Q;
 const real_t *R;
 real_t *P;
 real_t *F;
 real_t *H;
+real_t *HT;
 real_t *x_hat;
+real_t *y;
 };
 
 struct edgeAI_ctl{

@@ -21,6 +21,7 @@ from casadi import *
 import core_do_mpc
 # Import do-mpc plotting and data managament functions
 import data_do_mpc
+import observer_do_mpc
 import pdb
 
 # For communication to arduino
@@ -29,7 +30,7 @@ from time import sleep
 
 # number of batches to generate data from
 n_batches = 1
-offset = 0
+offset = 1
 controller_number = 2
 neural_network = True # NOTE: if false MPC instead of NN
 # initialize the problem (first lines of do_mpc.py)
@@ -51,7 +52,7 @@ import template_simulator
 Establish connection to arduino
 -----------------------------------------------
 """
-arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=0.3)
+arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=0.1)
 
 """
 -----------------------------------------------
@@ -140,13 +141,20 @@ for i in range(offset, offset + n_batches):
         configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
 
         # Make one optimizer step on arduino
-        ekf_data = configuration_1.observer.ekf.x_hat
-        arduino.write(bytes(str(ekf_data[0]),"utf8"))
+        observer_do_mpc.make_measurement(configuration_1)
+        meas_data = configuration_1.observer.measurement
+        arduino.write(bytes(str(meas_data[0]),"utf8"))
         sleep(0.05)
-        arduino.write(bytes(str(ekf_data[1]),"utf8"))
-        sleep(0.05)
-        arduino.write(bytes(str(ekf_data[2]),"utf8"))
-        sleep(0.05)
+        arduino.write(bytes(str(meas_data[1]),"utf8"))
+        # ekf_data = configuration_1.observer.ekf.x_hat
+        # arduino.write(bytes(str(ekf_data[0]),"utf8"))
+        # sleep(0.05)
+        # arduino.write(bytes(str(ekf_data[1]),"utf8"))
+        # sleep(0.05)
+        # # arduino.write(bytes(str(ekf_data[2]),"utf8"))
+        # # sleep(0.05)
+        while (arduino.in_waiting < 1):
+            sleep(0.1)
 
         u_opt_byte = arduino.read(100)
         u_opt_str = u_opt_byte.decode("utf8")
@@ -158,7 +166,9 @@ for i in range(offset, offset + n_batches):
             configuration_1.make_step_projection()
 
         # Make one observer step
-        configuration_1.make_step_observer()
+        # configuration_1.make_step_observer()
+        for i in range(3):
+            configuration_1.make_step_simulator()
 
         # Store the information
         configuration_1.store_mpc_data()
