@@ -78,7 +78,7 @@ void mtx_tanh(real_t vec[], const uint32_t rows)
 
 void mtx_times_mtx(real_t out[], const real_t mtx1[], const real_t mtx2[], const uint32_t rows1, const uint32_t rowcol, const uint32_t cols2)
  {
-	uint32_t i, j, k, m = 0;
+	uint32_t i, j, m, k = 0;
 
 	for (i = 0; i < rows1; i++) {
 		for (j = 0; j < cols2; j++) {
