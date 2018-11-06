@@ -52,7 +52,7 @@ import template_simulator
 Establish connection to arduino
 -----------------------------------------------
 """
-arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=0.1)
+arduino = serial.Serial('/dev/ttyACM0', 9600, timeout=1.0)
 
 """
 -----------------------------------------------
@@ -113,8 +113,8 @@ for i in range(offset, offset + n_batches):
     # configuration_1.simulator.p_real_batch[1] = c_batch
     configuration_1.simulator.p_real_batch[-1] = w_init
 
-    configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
-    configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
+    configuration_1.observer.ekf.x_hat[3] = E_batch #+ NP.random.normal(0,0.05)
+    configuration_1.observer.ekf.x_hat[-1] = w_init #+ NP.random.normal(0,0.1)
 
     # Update initial condition for this batch
     x_scaling = configuration_1.model.ocp.x_scaling
@@ -154,19 +154,32 @@ for i in range(offset, offset + n_batches):
         # # arduino.write(bytes(str(ekf_data[2]),"utf8"))
         # # sleep(0.05)
         while (arduino.in_waiting < 1):
-            sleep(0.1)
+            sleep(0.05)
+        #  states
+        theta_est_byte = arduino.readline()
+        theta_est = float(theta_est_byte.decode("utf8"))
+        phi_est_byte = arduino.readline()
+        phi_est = float(phi_est_byte.decode("utf8"))
+        psi_est_byte = arduino.readline()
+        psi_est = float(psi_est_byte.decode("utf8"))
+        # parameters
+        E0_est_byte = arduino.readline()
+        E0_est = float(E0_est_byte.decode("utf8"))
+        v0_est_byte = arduino.readline()
+        v0_est = float(v0_est_byte.decode("utf8"))
+        # optimal input
+        u_opt_byte = arduino.readline()
+        u_opt = float(u_opt_byte.decode("utf8"))
+        u_opt_lim = NP.maximum(NP.minimum(u_opt,10.0),-10.0)
+        # pdb.set_trace()
 
-        u_opt_byte = arduino.read(100)
-        u_opt_str = u_opt_byte.decode("utf8")
-        u_opt_float = float(u_opt_str)
-        u_opt_lim = NP.maximum(NP.minimum(u_opt_float,10.0),-10.0)
+        configuration_1.observer.ekf.x_hat = NP.array([theta_est,phi_est,psi_est,E0_est,v0_est])
         configuration_1.optimizer.u_mpc = u_opt_lim
+
         # projection when constraint probaby will be violated
         if neural_network:
             configuration_1.make_step_projection()
 
-        # Make one observer step
-        # configuration_1.make_step_observer()
         for i in range(3):
             configuration_1.make_step_simulator()
 

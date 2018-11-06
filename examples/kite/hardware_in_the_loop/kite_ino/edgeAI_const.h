@@ -4,7 +4,9 @@
 
 enum {
 SIZE_INPUT = 3,
-SIZE_OUTPUT = 1
+SIZE_OUTPUT = 1,
+SIZE_INPUT_PARAM = 5,
+SIZE_MEAS = 2,
 };
 
 #endif

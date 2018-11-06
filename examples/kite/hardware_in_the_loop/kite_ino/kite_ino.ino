@@ -17,6 +17,8 @@ void setup() {
   ctl.ekf->x_hat[0] = 0.34359907;
   ctl.ekf->x_hat[1] = 0.52791537;
   ctl.ekf->x_hat[2] = 0.0;
+  ctl.ekf->x_hat[3] = 5.0;
+  ctl.ekf->x_hat[4] = 10.0;
 	real_t u_mpc = 1.22835618;
 	ctl.out[0] = u_mpc;
 }
@@ -68,7 +70,11 @@ void loop() {
 	make_dnn_step(&ctl);
 
 	// return optimal input (and for plotting the estimated values)
-	float print_out = (float) ctl.out[0];
-	Serial.print(print_out,4);
+	Serial.println(ctl.ekf->x_hat[0],8);
+	Serial.println(ctl.ekf->x_hat[1],8);
+	Serial.println(ctl.ekf->x_hat[2],8);
+	Serial.println(ctl.ekf->x_hat[3],8);
+	Serial.println(ctl.ekf->x_hat[4],8);
+	Serial.println(ctl.out[0],8);
 
 }

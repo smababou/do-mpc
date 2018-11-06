@@ -1,9 +1,8 @@
 #include <stddef.h>
 #include <string.h>
+#include <math.h>
 #include "edgeAI_main.h"
 #include "edgeAI_const.h"
-#include "rhs.h"
-#include "F_fun.h"
 
 static void make_scale(
 	struct edgeAI_ctl *ctl
@@ -57,67 +56,69 @@ void make_ekf_step(struct edgeAI_ctl *ctl)
 	// sizes
 	const uint32_t nx = 5, ny = 2;
 	uint32_t i, j, k;
+	real_t xk[3];
+	const real_t dt = 0.05;
+	uint32_t ems = 50;
+	real_t r1, r2;
 
 	for (k=0; k<3; k++) {
 
 		// predict states
-		uint32_t n_in = x_pred_n_in();
-		uint32_t n_out = x_pred_n_out();
+		for (i=0; i<3; i++) {
+			xk[i] = ctl->ekf->x_hat[i];
+		}
+		for (i=0; i<ems; i++) {
 
-		uint32_t sz_arg=n_in, sz_res=n_out, sz_iw=0, sz_w=0;
-		if (x_pred_work(&sz_arg, &sz_res, &sz_iw, &sz_w)) return 1;
+			// state xk[0]
+			r1 =(ctl->ekf->x_hat[3]-(0.028*pow(ctl->out[0],2)));
+			xk[0] = xk[0] + dt/ems * ((((ctl->ekf->x_hat[4]*r1)*cos(xk[0]))/400.0)*(cos(xk[2])-(tan(xk[0])/r1)));
+			// state phi
+			xk[1] = xk[1] + dt/ems * (-((((ctl->ekf->x_hat[4]*(ctl->ekf->x_hat[3]-(0.028*pow(ctl->out[0],2))))*cos(xk[0]))/(400.0*sin(xk[0])))*sin(xk[2])));
+			// state xk[2]
+			r2 =((ctl->ekf->x_hat[4]*(ctl->ekf->x_hat[3]-(0.028*pow(ctl->out[0],2))))*cos(xk[0]));
+			xk[2] = xk[2] + dt/ems * (((r2/400.0)*ctl->out[0])-(((r2/(400.0*sin(xk[0])))*sin(xk[2]))*cos(xk[0])));
 
-		real_t *arg[sz_arg];
-	    real_t *res[sz_res];
-	    uint32_t iw[sz_iw];
-	    real_t w[sz_w];
-
-		real_t xk[3];
-		xk[0] = ctl->ekf->x_hat[0];
-		xk[1] = ctl->ekf->x_hat[1];
-		xk[2] = ctl->ekf->x_hat[2];
-	    real_t p[2];
-		p[0] = ctl->ekf->x_hat[3];
-		p[1] = ctl->ekf->x_hat[4];
-	    real_t u[1];
-		u[0] = ctl->out[0];
-
-		x_pred_incref();
-
-		arg[0] = xk;
-	    arg[1] = u;
-	    arg[2] = p;
-	    res[0] = xk;
-
-	    if (x_pred(arg, res, iw, w, 0)) return 1;
-
-		x_pred_decref();
+		}
 
 		// state transition
-		n_in = F_fun_n_in();
-		n_out = F_fun_n_out();
+		const real_t c_tilde = 0.028;
+		const real_t L_tether = 400.0;
+		const real_t p1 = 0.0025;
+		real_t h1, h2, h3, h4, h5; // auxiliary terms
+		h1 = ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2));
+		h2 = ctl->ekf->x_hat[4]*h1;
+		ctl->ekf->F[0] = -(((cos(ctl->ekf->x_hat[2])-(tan(ctl->ekf->x_hat[0])/h1))*(p1*(h2*sin(ctl->ekf->x_hat[0]))))+(((h2*cos(ctl->ekf->x_hat[0]))/L_tether)*((1./h1)/pow(cos(ctl->ekf->x_hat[0]),2))));
+		ctl->ekf->F[1] = 0.0;
+		ctl->ekf->F[2] = -((((ctl->ekf->x_hat[4]*(ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2))))*cos(ctl->ekf->x_hat[0]))/L_tether)*sin(ctl->ekf->x_hat[2]));
+		h1 = ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2));
+		h2 = tan(ctl->ekf->x_hat[0])/h1;
+		h3 = cos(ctl->ekf->x_hat[0]);
+		ctl->ekf->F[3] = ((cos(ctl->ekf->x_hat[2])-h2)*(p1*(h3*ctl->ekf->x_hat[4])))+((((ctl->ekf->x_hat[4]*h1)*h3)/L_tether)*(h2/h1));
+		h1 = ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2));
+		ctl->ekf->F[4] = (cos(ctl->ekf->x_hat[2])-(tan(ctl->ekf->x_hat[0])/h1))*(p1*(cos(ctl->ekf->x_hat[0])*h1));
+		h1 = ctl->ekf->x_hat[4]*(ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2)));
+		h2 = L_tether*sin(ctl->ekf->x_hat[0]);
+		ctl->ekf->F[5] = sin(ctl->ekf->x_hat[2])*(((h1*sin(ctl->ekf->x_hat[0]))/h2)+((((h1*cos(ctl->ekf->x_hat[0]))/h2)/h2)*(L_tether*cos(ctl->ekf->x_hat[0]))));
+		ctl->ekf->F[6] = 0.0;
+		ctl->ekf->F[7] = -((((ctl->ekf->x_hat[4]*(ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2))))*cos(ctl->ekf->x_hat[0]))/(L_tether*sin(ctl->ekf->x_hat[0])))*cos(ctl->ekf->x_hat[2]));
+		ctl->ekf->F[8] = -(sin(ctl->ekf->x_hat[2])*((cos(ctl->ekf->x_hat[0])*ctl->ekf->x_hat[4])/(L_tether*sin(ctl->ekf->x_hat[0]))));
+		ctl->ekf->F[9] = -(sin(ctl->ekf->x_hat[2])*((cos(ctl->ekf->x_hat[0])*(ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2))))/(L_tether*sin(ctl->ekf->x_hat[0]))));
+		h1 = sin(ctl->ekf->x_hat[2]);
+		h2 = ctl->ekf->x_hat[4]*(ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2)));
+		h3 = h2*sin(ctl->ekf->x_hat[0]);
+		h4 = L_tether*sin(ctl->ekf->x_hat[0]);
+		h5 = (h2*cos(ctl->ekf->x_hat[0]))/h4;
+		ctl->ekf->F[10] = ((cos(ctl->ekf->x_hat[0])*(h1*((h3/h4)+((h5/h4)*(L_tether*cos(ctl->ekf->x_hat[0]))))))+((h5*h1)*sin(ctl->ekf->x_hat[0])))-(ctl->out[0]*(p1*h3));
+		ctl->ekf->F[11] = 0.0;
+		ctl->ekf->F[12] = -(cos(ctl->ekf->x_hat[0])*((((ctl->ekf->x_hat[4]*(ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2))))*cos(ctl->ekf->x_hat[0]))/(L_tether*sin(ctl->ekf->x_hat[0])))*cos(ctl->ekf->x_hat[2])));
+		h1 = cos(ctl->ekf->x_hat[0])*ctl->ekf->x_hat[4];
+		ctl->ekf->F[13] = ((ctl->out[0]*(p1*h1))-(cos(ctl->ekf->x_hat[0])*(sin(ctl->ekf->x_hat[2])*(h1/(L_tether*sin(ctl->ekf->x_hat[0]))))));
+		h1 = cos(ctl->ekf->x_hat[0])*(ctl->ekf->x_hat[3]-(c_tilde*pow(ctl->out[0],2)));
+		ctl->ekf->F[14] = ((ctl->out[0]*(p1*h1))-(cos(ctl->ekf->x_hat[0])*(sin(ctl->ekf->x_hat[2])*(h1/(L_tether*sin(ctl->ekf->x_hat[0]))))));
+		for (i=15; i<nx*nx; i++) {
+			ctl->ekf->F[i] = 0.0;
+		}
 
-		sz_arg=n_in, sz_res=n_out, sz_iw=0, sz_w=0;
-		if (F_fun_work(&sz_arg, &sz_res, &sz_iw, &sz_w)) return 1;
-
-		// real_t *arg[sz_arg];
-	    // real_t *res[sz_res];
-	    // uint32_t iw[sz_iw];
-	    // real_t w[sz_w];
-
-		F_fun_incref();
-		real_t xm[3];
-		xm[0] = ctl->ekf->x_hat[0];
-		xm[1] = ctl->ekf->x_hat[1];
-		xm[2] = ctl->ekf->x_hat[2];
-		arg[0] = xm;
-	    arg[1] = u;
-	    arg[2] = p;
-	    res[0] = ctl->ekf->F;
-
-	    if (F_fun(arg, res, iw, w, 0)) return 1;
-
-		F_fun_decref();
 
 		// predict covariance
 		real_t t_step = 0.05;
@@ -130,13 +131,17 @@ void make_ekf_step(struct edgeAI_ctl *ctl)
 			ctl->ekf->F[i] = t_step*ctl->ekf->F[i];
 		}
 		//  initialize with identity matrix
+		for (i=0; i<nx*nx; i++) {
+	        F_exp[i] = 0.0;
+	        F_mean_2[i] = 0.0;
+	    }
 		for (i=0; i<nx; i++) {
-			F_exp[i*nx] = 1.0;
-			F_mean_2[i*nx] = 1.0;
+			F_exp[i*nx+i] = 1.0;
+			F_mean_2[i*nx+i] = 1.0;
 		}
-		real_t fac = 1;
+		uint32_t fac = 1;
 		// taylor approximation of matrix exponential
-		for (i=0; i<12; i++) {
+		for (i=0; i<8; i++) {
 			mtx_times_mtx(F_mean_1,F_mean_2,ctl->ekf->F,nx,nx,nx);
 			fac = fac*(i+1);
 			for (j=0; j<nx*nx; j++) {
@@ -174,7 +179,7 @@ void make_ekf_step(struct edgeAI_ctl *ctl)
 		// update state estimate
 		real_t PH_51[5];
 		mtx_times_vec_dense(PH_51,K,yk,nx,ny);
-		mtx_add(ctl->ekf->x_hat,ctl->ekf->x_hat,PH_51,nx,1);
+		mtx_add(ctl->ekf->x_hat,xk,PH_51,nx,1);
 
 		// update covariance estimate
 		mtx_times_mtx(PH_55_1,K,ctl->ekf->H,nx,ny,nx);
@@ -187,8 +192,8 @@ void make_ekf_step(struct edgeAI_ctl *ctl)
 	}
 
 	ctl->in[0] = ctl->ekf->x_hat[0];
-	ctl->in[1] = ctl->ekf->x_hat[2];
-	ctl->in[2] = ctl->ekf->x_hat[3];
+	ctl->in[1] = ctl->ekf->x_hat[1];
+	ctl->in[2] = ctl->ekf->x_hat[2];
 
 	return;
 
