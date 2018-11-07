@@ -97,16 +97,16 @@ for i in range(offset, offset + n_batches):
     initial_state_batch = NP.array([theta_0, phi_0, psi_0])
 
     # choose the real parameters
-    E_batch = NP.random.uniform(4.0,6.0)
-    c_batch = NP.random.uniform(0.005,0.04)
+    E_batch = 5.0 #NP.random.uniform(4.0,6.0)
+    # c_batch = NP.random.uniform(0.005,0.04)
 
-    w_mean = 8.0 + NP.random.uniform() * 4.0
+    w_mean = 10.0 #8.0 + NP.random.uniform() * 4.0
     var_t = 0.05 + NP.random.uniform() * 0.1
     w_lb = NP.array([7.0])
     w_ub = NP.array([13.0])
     w_amp_max = NP.minimum(NP.abs(w_ub-w_mean),NP.abs(w_lb-w_mean))
     w_amp = NP.random.uniform() * w_amp_max
-    w_shift = NP.random.uniform() * 2.0 * pi
+    w_shift = 0.0 #NP.random.uniform() * 2.0 * pi
     w_init = w_mean + w_amp * sin(w_shift)
 
     configuration_1.simulator.p_real_batch[0] = E_batch
@@ -140,55 +140,60 @@ for i in range(offset, offset + n_batches):
         t0_sim = configuration_1.simulator.t0_sim
         configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
 
-        # Make one optimizer step on arduino
-        observer_do_mpc.make_measurement(configuration_1)
-        meas_data = configuration_1.observer.measurement
-        arduino.write(bytes(str(meas_data[0]),"utf8"))
-        sleep(0.05)
-        arduino.write(bytes(str(meas_data[1]),"utf8"))
-        # ekf_data = configuration_1.observer.ekf.x_hat
-        # arduino.write(bytes(str(ekf_data[0]),"utf8"))
-        # sleep(0.05)
-        # arduino.write(bytes(str(ekf_data[1]),"utf8"))
-        # sleep(0.05)
-        # # arduino.write(bytes(str(ekf_data[2]),"utf8"))
-        # # sleep(0.05)
+        # get optimal input
         while (arduino.in_waiting < 1):
             sleep(0.05)
-        #  states
+        u_opt_byte = arduino.readline()
+        u_opt = float(u_opt_byte.decode("utf8"))
+        u_opt_lim = NP.maximum(NP.minimum(u_opt,10.0),-10.0)
+        configuration_1.optimizer.u_mpc = u_opt_lim
+
+        # projection when constraint probaby will be violated
+        configuration_1.make_step_projection()
+
+
+        for j in range(3):
+
+            # simulate one step
+            configuration_1.make_step_simulator()
+
+            # obtain measurements and send to micro
+            observer_do_mpc.make_measurement(configuration_1)
+            arduino.write(bytes(str(configuration_1.observer.measurement[0]),"utf8"))
+            sleep(0.05)
+            arduino.write(bytes(str(configuration_1.observer.measurement[1]),"utf8"))
+
+            while (arduino.in_waiting < 1):
+                sleep(0.05)
+
+            is_cont_byte = arduino.readline();
+            is_cont = is_cont_byte.decode("utf8")
+            if not (is_cont == "continue\r\n"):
+                raise NameError('Did not get command to continue!')
+
+        while (arduino.in_waiting < 1):
+            sleep(0.05)
+        #  obtain estimated states
         theta_est_byte = arduino.readline()
         theta_est = float(theta_est_byte.decode("utf8"))
         phi_est_byte = arduino.readline()
         phi_est = float(phi_est_byte.decode("utf8"))
         psi_est_byte = arduino.readline()
         psi_est = float(psi_est_byte.decode("utf8"))
-        # parameters
+
+        # obtain estimated parameters
         E0_est_byte = arduino.readline()
         E0_est = float(E0_est_byte.decode("utf8"))
         v0_est_byte = arduino.readline()
         v0_est = float(v0_est_byte.decode("utf8"))
-        # optimal input
-        u_opt_byte = arduino.readline()
-        u_opt = float(u_opt_byte.decode("utf8"))
-        u_opt_lim = NP.maximum(NP.minimum(u_opt,10.0),-10.0)
-        # pdb.set_trace()
 
+        # save ekf results
         configuration_1.observer.ekf.x_hat = NP.array([theta_est,phi_est,psi_est,E0_est,v0_est])
-        configuration_1.optimizer.u_mpc = u_opt_lim
-
-        # projection when constraint probaby will be violated
-        if neural_network:
-            configuration_1.make_step_projection()
-
-        for i in range(3):
-            configuration_1.make_step_simulator()
+        print(NP.array([theta_est,phi_est,psi_est,E0_est,v0_est]))
 
         # Store the information
         configuration_1.store_mpc_data()
 
-        # Set initial condition constraint for the next iteration
-        configuration_1.prepare_next_iter()
-        print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
     # Export data
     data_do_mpc.plot_mpc(configuration_1)
     data_do_mpc.export_for_learning(configuration_1, "results/data_batch_" + str(i))
