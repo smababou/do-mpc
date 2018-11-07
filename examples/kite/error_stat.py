@@ -25,9 +25,9 @@ import data_do_mpc
 import pdb
 
 # number of batches to generate data from
-n_batches = 10
+n_batches = 100
 offset = 0
-controller_number = 1
+controller_number = 0
 neural_network = True # NOTE: if false MPC instead of NN
 # initialize the problem (first lines of do_mpc.py)
 
@@ -49,7 +49,7 @@ Load neural network
 -----------------------------------------------
 """
 if neural_network:
-    filename = 'controller_' + str(controller_number)
+    filename = 'controller_du' + str(controller_number)
     json_file = open(filename+'.json', 'r')
     loaded_model_json = json_file.read()
     json_file.close()
@@ -87,8 +87,8 @@ for i in range(offset, offset + n_batches):
     phi_0 = 0.52791537
     psi_0 = 0.0
 
-    theta_0 = NP.random.uniform(0.15,1.0)
-    phi_0 = NP.random.uniform(-1.25,1.3)
+    theta_0 = NP.random.uniform(0.2,1.6)
+    phi_0 = NP.random.uniform(-1.4,1.4)
     psi_0 = NP.random.uniform(-3.3,3.3)
 
     initial_state_batch = NP.array([theta_0, phi_0, psi_0])
@@ -142,8 +142,8 @@ for i in range(offset, offset + n_batches):
     # Solve the problem with the neural network
     u_lb = NP.array([-10.0])
     u_ub = NP.array([10.0])
-    x_lb = NP.array([0.15, -1.25,-3.3])
-    x_ub = NP.array([1.0, 1.3, 3.3])
+    x_lb = NP.array([0.2, -1.4,-3.3])
+    x_ub = NP.array([1.6, 1.4, 3.3])
     x_in_scaled = NP.atleast_2d(((configuration_1.observer.observed_states) - x_lb) / (x_ub - x_lb))
     x_in_scaled = NP.atleast_2d(((initial_state_batch) - x_lb) / (x_ub - x_lb))
     u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
