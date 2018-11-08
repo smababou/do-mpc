@@ -1,8 +1,11 @@
 #include <stddef.h>
 #include <string.h>
+#include <stdlib.h>
 #include <math.h>
 #include "edgeAI_main.h"
 #include "edgeAI_const.h"
+#include "workspace.h"
+#include "osqp.h"
 
 static void make_scale(
 	struct edgeAI_ctl *ctl
@@ -197,6 +200,261 @@ void make_ekf_step(struct edgeAI_ctl *ctl)
 
 	return;
 
+}
+
+void make_projection_step(struct edgeAI_ctl *ctl)
+{
+
+	// predict states
+	const uint32_t ems_pred = 50;
+	const c_float dt = 0.005;
+	uint32_t i,j;
+	c_float r1[PARAM_SETTINGS], r2[PARAM_SETTINGS], xp1[STATES], xp2[STATES], xp3[STATES], xp4[STATES];
+	c_float uk = (c_float) ctl->out[0];
+
+	for (i=0; i<3; i++) {
+
+		xp1[i] = (c_float) ctl->ekf->x_hat[i];
+		xp2[i] = (c_float) ctl->ekf->x_hat[i];
+		xp3[i] = (c_float) ctl->ekf->x_hat[i];
+		xp4[i] = (c_float) ctl->ekf->x_hat[i];
+
+	}
+
+	for (i=0; i<ems_pred; i++) {
+
+		// state xk[0]
+		r1[0] =(4.0-(0.028*pow(uk,2)));
+		r1[1] =(4.0-(0.028*pow(uk,2)));
+		r1[2] =(6.0-(0.028*pow(uk,2)));
+		r1[3] =(6.0-(0.028*pow(uk,2)));
+		xp1[0] = xp1[0] + dt/ems_pred * ((((7.0*r1[0])*cos(xp1[0]))/400.0)*(cos(xp1[2])-(tan(xp1[0])/r1[0])));
+		xp2[0] = xp2[0] + dt/ems_pred * ((((13.0*r1[1])*cos(xp2[0]))/400.0)*(cos(xp2[2])-(tan(xp2[0])/r1[1])));
+		xp3[0] = xp3[0] + dt/ems_pred * ((((7.0*r1[2])*cos(xp3[0]))/400.0)*(cos(xp3[2])-(tan(xp3[0])/r1[2])));
+		xp4[0] = xp4[0] + dt/ems_pred * ((((13.0*r1[3])*cos(xp4[0]))/400.0)*(cos(xp4[2])-(tan(xp4[0])/r1[3])));
+
+		// state phi
+		xp1[1] = xp1[1] + dt/ems_pred * (-((((7.0*(4.0-(0.028*pow(uk,2))))*cos(xp1[0]))/(400.0*sin(xp1[0])))*sin(xp1[2])));
+		xp2[1] = xp2[1] + dt/ems_pred * (-((((13.0*(4.0-(0.028*pow(uk,2))))*cos(xp2[0]))/(400.0*sin(xp2[0])))*sin(xp2[2])));
+		xp3[1] = xp3[1] + dt/ems_pred * (-((((7.0*(6.0-(0.028*pow(uk,2))))*cos(xp3[0]))/(400.0*sin(xp3[0])))*sin(xp3[2])));
+		xp3[1] = xp3[1] + dt/ems_pred * (-((((13.0*(6.0-(0.028*pow(uk,2))))*cos(xp3[0]))/(400.0*sin(xp3[0])))*sin(xp3[2])));
+
+		// state xk[2]
+		r2[0] =((7.0*(4.0-(0.028*pow(uk,2))))*cos(xp1[0]));
+		r2[1] =((13.0*(4.0-(0.028*pow(uk,2))))*cos(xp2[0]));
+		r2[2] =((7.0*(6.0-(0.028*pow(uk,2))))*cos(xp3[0]));
+		r2[3] =((13.0*(6.0-(0.028*pow(uk,2))))*cos(xp4[0]));
+		xp1[2] = xp1[2] + dt/ems_pred * (((r2[0]/400.0)*uk)-(((r2[0]/(400.0*sin(xp1[0])))*sin(xp1[2]))*cos(xp1[0])));
+		xp2[2] = xp2[2] + dt/ems_pred * (((r2[1]/400.0)*uk)-(((r2[1]/(400.0*sin(xp2[0])))*sin(xp2[2]))*cos(xp2[0])));
+		xp3[2] = xp3[2] + dt/ems_pred * (((r2[2]/400.0)*uk)-(((r2[2]/(400.0*sin(xp3[0])))*sin(xp3[2]))*cos(xp3[0])));
+		xp4[2] = xp4[2] + dt/ems_pred * (((r2[3]/400.0)*uk)-(((r2[3]/(400.0*sin(xp4[0])))*sin(xp4[2]))*cos(xp4[0])));
+
+	}
+
+	// predict heights
+	c_float h1, h2, h3, h4;
+	const c_float min_height = 100.0, L_tether = 400.0;
+	h1 = L_tether * sin(xp1[0]) * cos(xp1[1]);
+	h2 = L_tether * sin(xp2[0]) * cos(xp2[1]);
+	h3 = L_tether * sin(xp3[0]) * cos(xp3[1]);
+	h4 = L_tether * sin(xp4[0]) * cos(xp4[1]);
+
+	// check if violation predicted
+	uint32_t v1 = 0, v2 = 0, v3 = 0, v4 = 0;
+	if (h1 < min_height) {
+		v1 = 1;
+	}
+	if (h2 < min_height) {
+		v2 = 1;
+	}
+	if (h3 < min_height) {
+		v3 = 1;
+	}
+	if (h4 < min_height) {
+		v4 = 1;
+	}
+
+	// if violation -> projection
+	// (v1 || v2 || v3 || v4)
+	if (1) {
+
+		// update linear cost
+		c_float q[] = {-uk, 0.0, 0.0, 0.0, 0.0};
+		osqp_update_lin_cost(&workspace, q);
+
+		// update constraint matrix
+		c_float H_1[] = { L_tether*cos(xp1[0])*cos(xp1[1]), -L_tether*sin(xp1[0])*sin(xp1[1]), 0 };
+		c_float H_2[] = { L_tether*cos(xp2[0])*cos(xp2[1]), -L_tether*sin(xp2[0])*sin(xp2[1]), 0 };
+		c_float H_3[] = { L_tether*cos(xp3[0])*cos(xp3[1]), -L_tether*sin(xp3[0])*sin(xp3[1]), 0 };
+		c_float H_4[] = { L_tether*cos(xp4[0])*cos(xp4[1]), -L_tether*sin(xp4[0])*sin(xp4[1]), 0 };
+
+		c_float HP1, HP2, HP3, HP4;
+		HP1 = ((cos(xp1[1])*(L_tether*cos(xp1[0])))*xp1[0])-(((L_tether*sin(xp1[0]))*sin(xp1[1]))*xp1[1]);
+		HP2 = ((cos(xp2[1])*(L_tether*cos(xp2[0])))*xp2[0])-(((L_tether*sin(xp2[0]))*sin(xp2[1]))*xp2[1]);
+		HP3 = ((cos(xp3[1])*(L_tether*cos(xp3[0])))*xp3[0])-(((L_tether*sin(xp3[0]))*sin(xp3[1]))*xp3[1]);
+		HP4 = ((cos(xp4[1])*(L_tether*cos(xp4[0])))*xp4[0])-(((L_tether*sin(xp4[0]))*sin(xp4[1]))*xp4[1]);
+
+		c_float Bt_1[STATES], Bt_2[STATES], Bt_3[STATES], Bt_4[STATES];
+		c_float E_0;
+		c_float v_0;
+
+
+		E_0 = 4.0;
+		v_0 = 7.0;
+		Bt_1[0] = -(0.0375*(((cos(xp1[2])-(tan(xp1[0])/(E_0-(0.028*pow(uk,2)))))*(0.0025*(cos(xp1[0])*(v_0*(0.028*(uk+uk))))))+((((v_0*(E_0-(0.028*pow(uk,2))))*cos(xp1[0]))/L_tether)*(((tan(xp1[0])/(E_0-(0.028*pow(uk,2))))/(E_0-(0.028*pow(uk,2))))*(0.028*(uk+uk))))));
+		Bt_1[1] = (0.0375*(sin(xp1[2])*((cos(xp1[0])*(v_0*(0.028*(uk+uk))))/(L_tether*sin(xp1[0])))));
+		Bt_1[2] = 0.0375*(((((v_0*(E_0-(0.028*pow(uk,2))))*cos(xp1[0]))/L_tether)-(uk*(0.0025*(cos(xp1[0])*(v_0*(0.028*(uk+uk)))))))+(cos(xp1[0])*(sin(xp1[2])*((cos(xp1[0])*(v_0*(0.028*(uk+uk))))/(L_tether*sin(xp1[0]))))));
+
+		E_0 = 4.0;
+		v_0 = 13.0;
+		Bt_2[0] = -(0.0375*(((cos(xp1[2])-(tan(xp1[0])/(E_0-(0.028*pow(uk,2)))))*(0.0025*(cos(xp1[0])*(v_0*(0.028*(uk+uk))))))+((((v_0*(E_0-(0.028*pow(uk,2))))*cos(xp1[0]))/L_tether)*(((tan(xp1[0])/(E_0-(0.028*pow(uk,2))))/(E_0-(0.028*pow(uk,2))))*(0.028*(uk+uk))))));
+		Bt_2[1] = (0.0375*(sin(xp1[2])*((cos(xp1[0])*(v_0*(0.028*(uk+uk))))/(L_tether*sin(xp1[0])))));
+		Bt_2[2] = 0.0375*(((((v_0*(E_0-(0.028*pow(uk,2))))*cos(xp1[0]))/L_tether)-(uk*(0.0025*(cos(xp1[0])*(v_0*(0.028*(uk+uk)))))))+(cos(xp1[0])*(sin(xp1[2])*((cos(xp1[0])*(v_0*(0.028*(uk+uk))))/(L_tether*sin(xp1[0]))))));
+
+		E_0 = 6.0;
+		v_0 = 7.0;
+		Bt_3[0] = -(0.0375*(((cos(xp1[2])-(tan(xp1[0])/(E_0-(0.028*pow(uk,2)))))*(0.0025*(cos(xp1[0])*(v_0*(0.028*(uk+uk))))))+((((v_0*(E_0-(0.028*pow(uk,2))))*cos(xp1[0]))/L_tether)*(((tan(xp1[0])/(E_0-(0.028*pow(uk,2))))/(E_0-(0.028*pow(uk,2))))*(0.028*(uk+uk))))));
+		Bt_3[1] = (0.0375*(sin(xp1[2])*((cos(xp1[0])*(v_0*(0.028*(uk+uk))))/(L_tether*sin(xp1[0])))));
+		Bt_3[2] = 0.0375*(((((v_0*(E_0-(0.028*pow(uk,2))))*cos(xp1[0]))/L_tether)-(uk*(0.0025*(cos(xp1[0])*(v_0*(0.028*(uk+uk)))))))+(cos(xp1[0])*(sin(xp1[2])*((cos(xp1[0])*(v_0*(0.028*(uk+uk))))/(L_tether*sin(xp1[0]))))));
+
+		E_0 = 6.0;
+		v_0 = 13.0;
+		Bt_4[0] = -(0.0375*(((cos(xp1[2])-(tan(xp1[0])/(E_0-(0.028*pow(uk,2)))))*(0.0025*(cos(xp1[0])*(v_0*(0.028*(uk+uk))))))+((((v_0*(E_0-(0.028*pow(uk,2))))*cos(xp1[0]))/L_tether)*(((tan(xp1[0])/(E_0-(0.028*pow(uk,2))))/(E_0-(0.028*pow(uk,2))))*(0.028*(uk+uk))))));
+		Bt_4[1] = (0.0375*(sin(xp1[2])*((cos(xp1[0])*(v_0*(0.028*(uk+uk))))/(L_tether*sin(xp1[0])))));
+		Bt_4[2] = 0.0375*(((((v_0*(E_0-(0.028*pow(uk,2))))*cos(xp1[0]))/L_tether)-(uk*(0.0025*(cos(xp1[0])*(v_0*(0.028*(uk+uk)))))))+(cos(xp1[0])*(sin(xp1[2])*((cos(xp1[0])*(v_0*(0.028*(uk+uk))))/(L_tether*sin(xp1[0]))))));
+
+		c_float Ht_1, Ht_2, Ht_3, Ht_4;
+		Ht_1 = H_1[0]*Bt_1[0] + H_1[1]*Bt_1[1] + H_1[2]*Bt_1[2];
+		Ht_2 = H_2[0]*Bt_2[0] + H_2[1]*Bt_2[1] + H_2[2]*Bt_2[2];
+		Ht_3 = H_3[0]*Bt_3[0] + H_3[1]*Bt_3[1] + H_3[2]*Bt_3[2];
+		Ht_4 = H_4[0]*Bt_4[0] + H_4[1]*Bt_4[1] + H_4[2]*Bt_4[2];
+
+		c_float A_new[16], A_new_index[16];
+
+		A_new[0] = Bt_1[0];
+		A_new[1] = Bt_1[1];
+		A_new[3] = Bt_1[2];
+
+		A_new[4] = Bt_2[0];
+		A_new[5] = Bt_2[1];
+		A_new[6] = Bt_2[2];
+
+		A_new[7] = Bt_3[0];
+		A_new[8] = Bt_3[1];
+		A_new[9] = Bt_3[2];
+
+		A_new[10] = Bt_4[0];
+		A_new[11] = Bt_4[1];
+		A_new[12] = Bt_4[2];
+
+		A_new[13] = Ht_1;
+		A_new[14] = Ht_2;
+		A_new[15] = Ht_3;
+		A_new[16] = Ht_4;
+
+		c_int i;
+		for (i=0; i<16; i++) {
+			A_new_index[i] = i;
+		}
+
+		osqp_update_A(&workspace,A_new_index,A_new,16);
+
+		// update bounds
+		c_float l[] = {
+			0.0,
+			-0.5*M_PI,
+			-1.0*M_PI,
+			0.0,
+			-0.5*M_PI,
+			-1.0*M_PI,
+			0.0,
+			-0.5*M_PI,
+			-1.0*M_PI,
+			0.0,
+			-0.5*M_PI,
+			-1.0*M_PI,
+			100.0,
+			100.0,
+			100.0,
+			100.0,
+			-10.0,
+			0.0,
+			0.0,
+			0.0,
+			0.0
+		};
+		c_float u[] = {
+			0.5*M_PI,
+			0.5*M_PI,
+			1.0*M_PI,
+			0.5*M_PI,
+			0.5*M_PI,
+			1.0*M_PI,
+			0.5*M_PI,
+			0.5*M_PI,
+			1.0*M_PI,
+			0.5*M_PI,
+			0.5*M_PI,
+			1.0*M_PI,
+			500.0,
+			500.0,
+			500.0,
+			500.0,
+			10.0,
+			1000.0,
+			1000.0,
+			1000.0,
+			1000.0
+		};
+
+		l[0] = l[0] - xp1[0] + Bt_1[0]*uk;
+		l[1] = l[1] - xp1[1] + Bt_1[1]*uk;
+		l[2] = l[2] - xp1[2] + Bt_1[2]*uk;
+		l[3] = l[3] - xp2[0] + Bt_2[0]*uk;
+		l[4] = l[4] - xp2[1] + Bt_2[1]*uk;
+		l[5] = l[5] - xp2[2] + Bt_2[2]*uk;
+		l[6] = l[6] - xp3[0] + Bt_3[0]*uk;
+		l[7] = l[7] - xp3[1] + Bt_3[1]*uk;
+		l[8] = l[8] - xp3[2] + Bt_3[2]*uk;
+		l[9] = l[9] - xp4[0] + Bt_4[0]*uk;
+		l[10] = l[10] - xp4[1] + Bt_4[1]*uk;
+		l[11] = l[11] - xp4[2] + Bt_4[2]*uk;
+
+		l[12] = l[12] - h1 + Ht_1*uk;
+		l[13] = l[13] - h2 + Ht_2*uk;
+		l[14] = l[14] - h3 + Ht_3*uk;
+		l[15] = l[15] - h4 + Ht_4*uk;
+
+		u[0] = u[0] - xp1[0] + Bt_1[0]*uk;
+		u[1] = u[1] - xp1[1] + Bt_1[1]*uk;
+		u[2] = u[2] - xp1[2] + Bt_1[2]*uk;
+		u[3] = u[3] - xp2[0] + Bt_2[0]*uk;
+		u[4] = u[4] - xp2[1] + Bt_2[1]*uk;
+		u[5] = u[5] - xp2[2] + Bt_2[2]*uk;
+		u[6] = u[6] - xp3[0] + Bt_3[0]*uk;
+		u[7] = u[7] - xp3[1] + Bt_3[1]*uk;
+		u[8] = u[8] - xp3[2] + Bt_3[2]*uk;
+		u[9] = u[9] - xp4[0] + Bt_4[0]*uk;
+		u[10] = u[10] - xp4[1] + Bt_4[1]*uk;
+		u[11] = u[11] - xp4[2] + Bt_4[2]*uk;
+
+		u[12] = u[12] - h1 + Ht_1*uk;
+		u[13] = u[13] - h2 + Ht_2*uk;
+		u[14] = u[14] - h3 + Ht_3*uk;
+		u[15] = u[15] - h4 + Ht_4*uk;
+
+		osqp_update_bounds(&workspace, l, u);
+
+		// solve optimization problem
+		osqp_solve(&workspace);
+
+		update optimal solution
+		ctl->out[0] = (real_t) (&workspace)->solution->x[0];
+
+	}
+
+
+	return;
 }
 
 static void make_scale(struct edgeAI_ctl *ctl)

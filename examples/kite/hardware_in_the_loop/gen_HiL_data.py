@@ -29,8 +29,8 @@ import serial
 from time import sleep
 
 # number of batches to generate data from
-n_batches = 1
-offset = 1
+n_batches = 3
+offset = 2
 controller_number = 2
 neural_network = True # NOTE: if false MPC instead of NN
 # initialize the problem (first lines of do_mpc.py)
@@ -147,10 +147,6 @@ for i in range(offset, offset + n_batches):
         u_opt = float(u_opt_byte.decode("utf8"))
         u_opt_lim = NP.maximum(NP.minimum(u_opt,10.0),-10.0)
         configuration_1.optimizer.u_mpc = u_opt_lim
-
-        # projection when constraint probaby will be violated
-        configuration_1.make_step_projection()
-
 
         for j in range(3):
 

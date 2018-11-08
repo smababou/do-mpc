@@ -147,13 +147,13 @@ c_float udata[21] = {
 OSQPData data = {5, 21, &Pdata, &Adata, qdata, ldata, udata};
 
 // Define settings structure
-OSQPSettings settings = {(c_float)0.10000000000000000555, (c_float)0.00000100000000000000, 0, 1, 0, (c_float)5.00000000000000000000, 
+OSQPSettings settings = {(c_float)0.10000000000000000555, (c_float)0.00000100000000000000, 0, 1, 0, (c_float)5.00000000000000000000,
 #ifdef PROFILING
-(c_float)0.40000000000000002220, 
+(c_float)0.40000000000000002220,
 #endif  // PROFILING
 10000, (c_float)0.00100000000000000002, (c_float)0.00100000000000000002, (c_float)0.00010000000000000000, (c_float)0.00010000000000000000, (c_float)1.60000000000000008882, 0, 0, 25, 1,
 #ifdef PROFILING
-(c_float)0.00000000000000000000 
+(c_float)0.00000000000000000000
 #endif  // PROFILING
 };
 
@@ -832,4 +832,3 @@ work_delta_y, work_Atdelta_y,
 work_delta_x, work_Pdelta_x, work_Adelta_x,
 work_D_temp, work_D_temp_A, work_E_temp,
 &settings, &scaling, &solution, &info};
-

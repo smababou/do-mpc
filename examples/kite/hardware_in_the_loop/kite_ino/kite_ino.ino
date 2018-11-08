@@ -35,11 +35,16 @@ void loop() {
 
 	// make optimization step
 	make_dnn_step(&ctl);
+	ctl.out[0] = fmin(fmax(ctl.out[0],-10.0),10.0);
 
-	//  return optimal control input
+	// make projection step
+	make_projection_step(&ctl);
+ 	ctl.out[0] = fmin(fmax(ctl.out[0],-10.0),10.0);
+
+	// return optimal control input
 	Serial.println(ctl.out[0],8);
 
-	//  estimation loop
+	// estimation loop
 	for (i=0; i<3; i++) {
 
 		// wait for new information
