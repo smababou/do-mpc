@@ -16,6 +16,9 @@ class ekf:
         nx = x.size(1)
         np = p.size(1)
         f = model.rhs
+        rhs_fun = Function("rhs_fun",[x,u,p],[model.rhs])
+        ems = 50
+        delta_t = 0.05
         if param_est:
             # if not (self.optimizer.state_discretization == 'discrete-time'):
             #     f = vertcat(f,DM(NP.zeros(np)))
@@ -39,6 +42,13 @@ class ekf:
             H = jacobian(h,x)
         self.F = Function("F",[x,u,p,tv_p],[F])
         self.H = Function("H",[x,u,p,tv_p],[H])
+        for i in range(ems):
+            if i == 0:
+                x_pred_new = x + delta_t/ems * rhs_fun(x,u,p)
+            else:
+                x_pred_new = x_pred_old + delta_t/ems * rhs_fun(x_pred_old,u,p)
+            x_pred_old = x_pred_new
+        self.x_pred = Function("x_pred",[x,u,p],[x_pred_new])
 
 class mhe:
     "A class for the definition of a Moving Horizon Estimator"
@@ -142,11 +152,14 @@ def make_step_observer(conf):
             zk = NP.copy(NP.reshape(conf.observer.measurement,(-1,1)))
 
             # Predict states
-            for sim in range(rep_sim):
-                if conf.observer.param_est:
-                    xk[:nx,0]  = NP.squeeze((conf.simulator.simulator(x0 = xk[:nx,:], p = vertcat(u_mpc,xk[nx:,0],tv_p_real)))['xf'])
-                else:
-                    xk[:nx,0]  = NP.squeeze((conf.simulator.simulator(x0 = xk[:nx,:], p = vertcat(u_mpc,p_real,tv_p_real)))['xf'])
+            # for sim in range(rep_sim):
+            #     if conf.observer.param_est:
+            #         xk[:nx,0]  = NP.squeeze((conf.simulator.simulator(x0 = xk[:nx,:], p = vertcat(u_mpc,xk[nx:,0],tv_p_real)))['xf'])
+            #     else:
+            #         xk[:nx,0]  = NP.squeeze((conf.simulator.simulator(x0 = xk[:nx,:], p = vertcat(u_mpc,p_real,tv_p_real)))['xf'])
+            # NOTE: for realistic results, use state prediction without integration
+            xk[:nx,0] = NP.squeeze(conf.observer.ekf.x_pred(xk[:nx,:],u_mpc,xk[nx:,0]))
+
             # Predict covariance
             if conf.observer.param_est:
                 H = conf.observer.ekf.H(xk[:nx],u_mpc,xk[nx:],tv_p_real)
@@ -231,7 +244,7 @@ def make_step_observer(conf):
 
 def make_measurement(conf):
     # preprocess data
-    x = conf.simulator.xf_sim
+    x = conf.simulator.x0_sim
     u = conf.optimizer.u_mpc
     p = conf.simulator.p_real_batch
     tv_p = conf.simulator.tv_p_real_now(conf.simulator.t0_sim)

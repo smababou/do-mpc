@@ -24,9 +24,9 @@ import data_do_mpc
 import pdb
 
 # number of batches to generate data from
-n_batches = 5
+n_batches = 10
 offset = 0
-controller_number = 1
+controller_number = 2
 neural_network = True # NOTE: if false MPC instead of NN
 # initialize the problem (first lines of do_mpc.py)
 
@@ -56,6 +56,12 @@ if neural_network:
     # load weights into new model
     loaded_model.load_weights(filename+".h5")
     print("Loaded model from disk")
+
+    # bounds
+    u_lb = NP.array([-10.0])
+    u_ub = NP.array([10.0])
+    x_lb = NP.array([0.15, -1.25,-3.3])
+    x_ub = NP.array([1.0, 1.3, 3.3])
 
 for i in range(offset, offset + n_batches):
 
@@ -132,10 +138,6 @@ for i in range(offset, offset + n_batches):
         if not neural_network:
             configuration_1.make_step_optimizer()
         else:
-            u_lb = NP.array([-10.0])
-            u_ub = NP.array([10.0])
-            x_lb = NP.array([0.15, -1.25,-3.3])
-            x_ub = NP.array([1.0, 1.3, 3.3])
             x_in_scaled = NP.atleast_2d(((configuration_1.observer.observed_states) - x_lb) / (x_ub - x_lb))
             u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
             u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
@@ -146,14 +148,13 @@ for i in range(offset, offset + n_batches):
         # configuration_1.make_step_simulator() # NOTE: included in step_observer
 
         # projection when constraint probaby will be violated
-        configuration_1.make_step_projection()
+        if neural_network:
+            configuration_1.make_step_projection()
 
         # Make one observer step
         configuration_1.make_step_observer()
 
         # Store the information
-        if configuration_1.projector.flaaaag:
-            pdb.set_trace()
         configuration_1.store_mpc_data()
 
         # Set initial condition constraint for the next iteration
@@ -161,4 +162,4 @@ for i in range(offset, offset + n_batches):
         print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
     # Export data
     data_do_mpc.plot_mpc(configuration_1)
-    data_do_mpc.export_for_learning(configuration_1, "data/2_uncertainties_NN/data_batch_" + str(i))
+    data_do_mpc.export_for_learning(configuration_1, "data/test_proj/data_batch_" + str(i))

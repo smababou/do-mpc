@@ -9,8 +9,8 @@ import os.path
 import pdb
 
 # Load data
-path_to_data_1 = 'data/2_uncertainties/'
-n_batches_train_1 = 95
+path_to_data_1 = 'data/2_uncertainties_new/'
+n_batches_train_1 = 170
 n_batches_test_1 = 5
 n_batches_train_test_1 = n_batches_train_1 + n_batches_test_1
 
@@ -46,7 +46,7 @@ for i in range(n_batches_train_test_1):
     # remove the offset of one position in the state-control vector
     states.append(raw_data[i][0:-1,nt+nx:nt+2*nx])
     controls.append(raw_data[i][1:,nt+2*nx:nt+2*nx+nu])
-    
+
 # training data
 x_train_1 = NP.vstack(states[0:n_batches_train_1])
 # x_train_2 = NP.vstack(states[n_batches_train_test_1:n_batches_train_test_1+n_batches_train_2])
