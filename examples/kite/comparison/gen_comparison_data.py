@@ -21,12 +21,18 @@ from casadi import *
 import core_do_mpc
 # Import do-mpc plotting and data managament functions
 import data_do_mpc
+import projection_do_mpc
 import pdb
 
 # number of batches to generate data from
-n_batches = 100
-offset = 0
+n_batches = 119
+offset = 1
 controller_number = 2
+
+eval_NN = True
+eval_NN_P = True
+eval_MPC = True
+eval_MPC_P = True
 
 """
 -----------------------------------------------
@@ -64,99 +70,7 @@ initial_state_batch = NP.array([theta_0, phi_0, psi_0])
 
 """
 -----------------------------------------------
-Evaluate NMPC
------------------------------------------------
-"""
-
-# for i in range(offset, offset + n_batches):
-if False:
-
-    # Create the objects for each module
-    model_1 = template_model.model()
-    # Create an optimizer object based on the template and a model
-    optimizer_1 = template_optimizer.optimizer(model_1)
-    optimizer_1.t_step = 0.15
-    # Create an observer object based on the template and a model
-    observer_1 = template_EKF.observer(model_1)
-    # Create a simulator object based on the template and a model
-    simulator_1 = template_simulator.simulator(model_1)
-    # Create a configuration
-    configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
-
-    # Set up the solvers
-    configuration_1.observer.observed_states = configuration_1.model.ocp.x0
-    configuration_1.setup_solver()
-    configuration_1.simulator.p_real_batch = NP.zeros([2])
-
-    # choose the real parameters
-    E_batch = parameter_settings[i,0]
-
-    w_mean = parameter_settings[i,1]
-    var_t = parameter_settings[i,2]
-    w_amp = parameter_settings[i,3]
-    w_shift = parameter_settings[i,4]
-    w_init = w_mean + w_amp * sin(w_shift)
-
-    configuration_1.simulator.p_real_batch[0] = E_batch
-    # configuration_1.simulator.p_real_batch[1] = c_batch
-    configuration_1.simulator.p_real_batch[-1] = w_init
-
-    configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
-    configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
-
-    # Update initial condition for this batch
-    x_scaling = configuration_1.model.ocp.x_scaling
-    X_offset = configuration_1.optimizer.nlp_dict_out['X_offset']
-    nx = len(configuration_1.model.ocp.x0)
-    configuration_1.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
-    configuration_1.optimizer.arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
-    configuration_1.simulator.x0_sim = DM(initial_state_batch) / x_scaling
-    configuration_1.model.ocp.x0 = initial_state_batch
-    # Restart iteration counter
-    configuration_1.mpc_iteration = 1
-    configuration_1.simulator.t0_sim = 0
-    configuration_1.simulator.tf_sim = 0 + configuration_1.simulator.t_step_simulator
-    configuration_1.mpc_data = data_do_mpc.mpc_data(configuration_1)
-
-    configuration_1.mpc_data.mpc_parameters[0,:] = configuration_1.simulator.p_real_batch
-    configuration_1.mpc_data.mpc_parameters_est[0,:] = configuration_1.observer.ekf.x_hat[3:]
-
-    # Do not stop until a predefined amount of polymer has been produced
-    while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simulator < configuration_1.optimizer.t_end):
-
-        # Update wind
-        t0_sim = configuration_1.simulator.t0_sim
-        configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
-
-        # Make one optimizer step (solve the NLP)
-        configuration_1.make_step_optimizer()
-
-        # Simulate the system one step using the solution obtained in the optimization
-        # configuration_1.make_step_simulator() # NOTE: included in step_observer
-
-        # Make one observer step
-        configuration_1.make_step_observer()
-
-        # Store the information
-        configuration_1.store_mpc_data()
-
-        # Set initial condition constraint for the next iteration
-        configuration_1.prepare_next_iter()
-        print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
-    # Export data
-    data_do_mpc.plot_mpc(configuration_1)
-    data_do_mpc.export_for_learning(configuration_1, "results/data_batch_MPC_" + str(i))
-
-
-
-
-
-
-
-
-"""
------------------------------------------------
-Load and evaluate neural network
+Load neural network
 -----------------------------------------------
 """
 
@@ -169,92 +83,366 @@ loaded_model = model_from_json(loaded_model_json)
 loaded_model.load_weights(filename+".h5")
 print("Loaded model from disk")
 
-for i in range(offset, offset + n_batches):
+"""
+-----------------------------------------------
+Evaluate neural network without projection
+-----------------------------------------------
+"""
 
-    # Create the objects for each module
-    model_1 = template_model.model()
-    # Create an optimizer object based on the template and a model
-    optimizer_1 = template_optimizer.optimizer(model_1)
-    optimizer_1.t_step = 0.15
-    # Create an observer object based on the template and a model
-    observer_1 = template_EKF.observer(model_1)
-    # Create a simulator object based on the template and a model
-    simulator_1 = template_simulator.simulator(model_1)
-    # Create a configuration
-    configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
+if eval_NN:
 
-    # Set up the solvers
-    configuration_1.observer.observed_states = configuration_1.model.ocp.x0
-    configuration_1.setup_solver()
-    configuration_1.make_step_optimizer()
-    configuration_1.simulator.p_real_batch = NP.zeros([2])
+    for i in range(offset, offset + n_batches):
 
-    # choose the real parameters
-    E_batch = parameter_settings[i,0]
+        # Create the objects for each module
+        model_1 = template_model.model()
+        # Create an optimizer object based on the template and a model
+        optimizer_1 = template_optimizer.optimizer(model_1)
+        # Create an observer object based on the template and a model
+        observer_1 = template_EKF.observer(model_1)
+        # Create a simulator object based on the template and a model
+        simulator_1 = template_simulator.simulator(model_1)
+        # Create a configuration
+        configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
 
-    w_mean = parameter_settings[i,1]
-    var_t = parameter_settings[i,2]
-    w_amp = parameter_settings[i,3]
-    w_shift = parameter_settings[i,4]
-    w_init = w_mean + w_amp * sin(w_shift)
+        # Set up the solvers
+        configuration_1.observer.observed_states = configuration_1.model.ocp.x0
+        configuration_1.setup_solver()
+        configuration_1.make_step_optimizer()
+        configuration_1.simulator.p_real_batch = NP.zeros([2])
 
-    configuration_1.simulator.p_real_batch[0] = E_batch
-    # configuration_1.simulator.p_real_batch[1] = c_batch
-    configuration_1.simulator.p_real_batch[-1] = w_init
+        # choose the real parameters
+        E_batch = parameter_settings[i,0]
 
-    configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
-    configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
+        w_mean = parameter_settings[i,1]
+        var_t = parameter_settings[i,2]
+        w_amp = parameter_settings[i,3]
+        w_shift = parameter_settings[i,4]
+        w_init = w_mean + w_amp * sin(w_shift)
 
-    # Update initial condition for this batch
-    x_scaling = configuration_1.model.ocp.x_scaling
-    X_offset = configuration_1.optimizer.nlp_dict_out['X_offset']
-    nx = len(configuration_1.model.ocp.x0)
-    configuration_1.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
-    configuration_1.optimizer.arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
-    configuration_1.simulator.x0_sim = DM(initial_state_batch) / x_scaling
-    configuration_1.model.ocp.x0 = initial_state_batch
-    # Restart iteration counter
-    configuration_1.mpc_iteration = 1
-    configuration_1.simulator.t0_sim = 0
-    configuration_1.simulator.tf_sim = 0 + configuration_1.simulator.t_step_simulator
-    configuration_1.mpc_data = data_do_mpc.mpc_data(configuration_1)
+        configuration_1.simulator.p_real_batch[0] = E_batch
+        # configuration_1.simulator.p_real_batch[1] = c_batch
+        configuration_1.simulator.p_real_batch[-1] = w_init
 
-    configuration_1.mpc_data.mpc_parameters[0,:] = configuration_1.simulator.p_real_batch
-    configuration_1.mpc_data.mpc_parameters_est[0,:] = configuration_1.observer.ekf.x_hat[3:]
+        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.01)
+        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.02)
 
-    # Do not stop until a predefined amount of polymer has been produced
-    while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simulator < configuration_1.optimizer.t_end):
+        # Update initial condition for this batch
+        x_scaling = configuration_1.model.ocp.x_scaling
+        X_offset = configuration_1.optimizer.nlp_dict_out['X_offset']
+        nx = len(configuration_1.model.ocp.x0)
+        configuration_1.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
+        configuration_1.optimizer.arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
+        configuration_1.simulator.x0_sim = DM(initial_state_batch) / x_scaling
+        configuration_1.model.ocp.x0 = initial_state_batch
+        # Restart iteration counter
+        configuration_1.mpc_iteration = 1
+        configuration_1.simulator.t0_sim = 0
+        configuration_1.simulator.tf_sim = 0 + configuration_1.simulator.t_step_simulator
+        configuration_1.mpc_data = data_do_mpc.mpc_data(configuration_1)
 
-        # Update wind
-        t0_sim = configuration_1.simulator.t0_sim
-        configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
+        configuration_1.mpc_data.mpc_parameters[0,:] = configuration_1.simulator.p_real_batch
+        configuration_1.mpc_data.mpc_parameters_est[0,:] = configuration_1.observer.ekf.x_hat[3:]
 
-        # Make one optimizer step (solve the NLP)
-        u_lb = NP.array([-10.0])
-        u_ub = NP.array([10.0])
-        x_lb = NP.array([0.15, -1.25,-3.3])
-        x_ub = NP.array([1.0, 1.3, 3.3])
-        x_in_scaled = NP.atleast_2d(((configuration_1.observer.observed_states) - x_lb) / (x_ub - x_lb))
-        u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
-        u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
-        u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
-        configuration_1.optimizer.u_mpc = (u_opt_lim)
+        # Do not stop until a predefined amount of polymer has been produced
+        while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simulator < configuration_1.optimizer.t_end):
 
-        # Simulate the system one step using the solution obtained in the optimization
-        # configuration_1.make_step_simulator() # NOTE: included in step_observer
+            # Update wind
+            t0_sim = configuration_1.simulator.t0_sim
+            configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
 
-        # projection when constraint probaby will be violated
-        configuration_1.make_step_projection()
+            # Make one optimizer step (solve the NLP)
+            u_lb = NP.array([-10.0])
+            u_ub = NP.array([10.0])
+            x_lb = NP.array([0.15, -1.25,-3.3])
+            x_ub = NP.array([1.0, 1.3, 3.3])
+            x_in_scaled = NP.atleast_2d(((configuration_1.observer.observed_states) - x_lb) / (x_ub - x_lb))
+            u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
+            u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
+            u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
+            configuration_1.optimizer.u_mpc = (u_opt_lim)
 
-        # Make one observer step
-        configuration_1.make_step_observer()
+            # Simulate the system one step using the solution obtained in the optimization
+            # configuration_1.make_step_simulator() # NOTE: included in step_observer
 
-        # Store the information
-        configuration_1.store_mpc_data()
+            # Make one observer step
+            configuration_1.make_step_observer()
 
-        # Set initial condition constraint for the next iteration
-        configuration_1.prepare_next_iter()
-        print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
-    # Export data
-    data_do_mpc.plot_mpc(configuration_1)
-    data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_" + str(i))
+            # Store the information
+            configuration_1.store_mpc_data()
+
+            # Set initial condition constraint for the next iteration
+            configuration_1.prepare_next_iter()
+            print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
+        # Export data
+        data_do_mpc.plot_mpc(configuration_1)
+        data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_" + str(i))
+
+"""
+-----------------------------------------------
+Evaluate neural network without projection
+-----------------------------------------------
+"""
+
+if eval_NN_P:
+
+    for i in range(offset, offset + n_batches):
+
+        # Create the objects for each module
+        model_1 = template_model.model()
+        # Create an optimizer object based on the template and a model
+        optimizer_1 = template_optimizer.optimizer(model_1)
+        # Create an observer object based on the template and a model
+        observer_1 = template_EKF.observer(model_1)
+        # Create a simulator object based on the template and a model
+        simulator_1 = template_simulator.simulator(model_1)
+        # Create a configuration
+        configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
+
+        # Set up the solvers
+        configuration_1.observer.observed_states = configuration_1.model.ocp.x0
+        configuration_1.setup_solver()
+        configuration_1.make_step_optimizer()
+        configuration_1.simulator.p_real_batch = NP.zeros([2])
+
+        # choose the real parameters
+        E_batch = parameter_settings[i,0]
+
+        w_mean = parameter_settings[i,1]
+        var_t = parameter_settings[i,2]
+        w_amp = parameter_settings[i,3]
+        w_shift = parameter_settings[i,4]
+        w_init = w_mean + w_amp * sin(w_shift)
+
+        configuration_1.simulator.p_real_batch[0] = E_batch
+        # configuration_1.simulator.p_real_batch[1] = c_batch
+        configuration_1.simulator.p_real_batch[-1] = w_init
+
+        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
+        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
+
+        # Update initial condition for this batch
+        x_scaling = configuration_1.model.ocp.x_scaling
+        X_offset = configuration_1.optimizer.nlp_dict_out['X_offset']
+        nx = len(configuration_1.model.ocp.x0)
+        configuration_1.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
+        configuration_1.optimizer.arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
+        configuration_1.simulator.x0_sim = DM(initial_state_batch) / x_scaling
+        configuration_1.model.ocp.x0 = initial_state_batch
+        # Restart iteration counter
+        configuration_1.mpc_iteration = 1
+        configuration_1.simulator.t0_sim = 0
+        configuration_1.simulator.tf_sim = 0 + configuration_1.simulator.t_step_simulator
+        configuration_1.mpc_data = data_do_mpc.mpc_data(configuration_1)
+
+        configuration_1.mpc_data.mpc_parameters[0,:] = configuration_1.simulator.p_real_batch
+        configuration_1.mpc_data.mpc_parameters_est[0,:] = configuration_1.observer.ekf.x_hat[3:]
+
+        # Do not stop until a predefined amount of polymer has been produced
+        while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simulator < configuration_1.optimizer.t_end):
+
+            # Update wind
+            t0_sim = configuration_1.simulator.t0_sim
+            configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
+
+            # Make one optimizer step (solve the NLP)
+            u_lb = NP.array([-10.0])
+            u_ub = NP.array([10.0])
+            x_lb = NP.array([0.15, -1.25,-3.3])
+            x_ub = NP.array([1.0, 1.3, 3.3])
+            x_in_scaled = NP.atleast_2d(((configuration_1.observer.observed_states) - x_lb) / (x_ub - x_lb))
+            u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
+            u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
+            u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
+            configuration_1.optimizer.u_mpc = (u_opt_lim)
+
+            # Simulate the system one step using the solution obtained in the optimization
+            # configuration_1.make_step_simulator() # NOTE: included in step_observer
+
+            # projection when constraint probaby will be violated
+            projection_do_mpc .make_step_projection(configuration_1,"osqp")
+
+            # Make one observer step
+            configuration_1.make_step_observer()
+
+            # Store the information
+            configuration_1.store_mpc_data()
+
+            # Set initial condition constraint for the next iteration
+            configuration_1.prepare_next_iter()
+            print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
+        # Export data
+        data_do_mpc.plot_mpc(configuration_1)
+        data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_proj_" + str(i))
+
+"""
+-----------------------------------------------
+Evaluate NMPC without projection
+-----------------------------------------------
+"""
+
+if eval_MPC:
+
+    for i in range(offset, offset + n_batches):
+
+        # Create the objects for each module
+        model_1 = template_model.model()
+        # Create an optimizer object based on the template and a model
+        optimizer_1 = template_optimizer.optimizer(model_1)
+        # Create an observer object based on the template and a model
+        observer_1 = template_EKF.observer(model_1)
+        # Create a simulator object based on the template and a model
+        simulator_1 = template_simulator.simulator(model_1)
+        # Create a configuration
+        configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
+
+        # Set up the solvers
+        configuration_1.observer.observed_states = configuration_1.model.ocp.x0
+        configuration_1.setup_solver()
+        configuration_1.simulator.p_real_batch = NP.zeros([2])
+
+        # choose the real parameters
+        E_batch = parameter_settings[i,0]
+
+        w_mean = parameter_settings[i,1]
+        var_t = parameter_settings[i,2]
+        w_amp = parameter_settings[i,3]
+        w_shift = parameter_settings[i,4]
+        w_init = w_mean + w_amp * sin(w_shift)
+
+        configuration_1.simulator.p_real_batch[0] = E_batch
+        # configuration_1.simulator.p_real_batch[1] = c_batch
+        configuration_1.simulator.p_real_batch[-1] = w_init
+
+        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
+        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
+
+        # Update initial condition for this batch
+        x_scaling = configuration_1.model.ocp.x_scaling
+        X_offset = configuration_1.optimizer.nlp_dict_out['X_offset']
+        nx = len(configuration_1.model.ocp.x0)
+        configuration_1.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
+        configuration_1.optimizer.arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
+        configuration_1.simulator.x0_sim = DM(initial_state_batch) / x_scaling
+        configuration_1.model.ocp.x0 = initial_state_batch
+        # Restart iteration counter
+        configuration_1.mpc_iteration = 1
+        configuration_1.simulator.t0_sim = 0
+        configuration_1.simulator.tf_sim = 0 + configuration_1.simulator.t_step_simulator
+        configuration_1.mpc_data = data_do_mpc.mpc_data(configuration_1)
+
+        configuration_1.mpc_data.mpc_parameters[0,:] = configuration_1.simulator.p_real_batch
+        configuration_1.mpc_data.mpc_parameters_est[0,:] = configuration_1.observer.ekf.x_hat[3:]
+
+        # Do not stop until a predefined amount of polymer has been produced
+        while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simulator < configuration_1.optimizer.t_end):
+
+            # Update wind
+            t0_sim = configuration_1.simulator.t0_sim
+            configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
+
+            # Make one optimizer step (solve the NLP)
+            configuration_1.make_step_optimizer()
+
+            # Simulate the system one step using the solution obtained in the optimization
+            # configuration_1.make_step_simulator() # NOTE: included in step_observer
+
+            # Make one observer step
+            configuration_1.make_step_observer()
+
+            # Store the information
+            configuration_1.store_mpc_data()
+
+            # Set initial condition constraint for the next iteration
+            configuration_1.prepare_next_iter()
+            print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
+        # Export data
+        data_do_mpc.plot_mpc(configuration_1)
+        data_do_mpc.export_for_learning(configuration_1, "results/data_batch_MPC_" + str(i))
+
+"""
+-----------------------------------------------
+Evaluate NMPC nonlinear with projection
+-----------------------------------------------
+"""
+
+if eval_MPC_P:
+
+    for i in range(offset, offset + n_batches):
+
+        # Create the objects for each module
+        model_1 = template_model.model()
+        # Create an optimizer object based on the template and a model
+        optimizer_1 = template_optimizer.optimizer(model_1)
+        # Create an observer object based on the template and a model
+        observer_1 = template_EKF.observer(model_1)
+        # Create a simulator object based on the template and a model
+        simulator_1 = template_simulator.simulator(model_1)
+        # Create a configuration
+        configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
+
+        # Set up the solvers
+        configuration_1.observer.observed_states = configuration_1.model.ocp.x0
+        configuration_1.setup_solver()
+        configuration_1.simulator.p_real_batch = NP.zeros([2])
+
+        # choose the real parameters
+        E_batch = parameter_settings[i,0]
+
+        w_mean = parameter_settings[i,1]
+        var_t = parameter_settings[i,2]
+        w_amp = parameter_settings[i,3]
+        w_shift = parameter_settings[i,4]
+        w_init = w_mean + w_amp * sin(w_shift)
+
+        configuration_1.simulator.p_real_batch[0] = E_batch
+        # configuration_1.simulator.p_real_batch[1] = c_batch
+        configuration_1.simulator.p_real_batch[-1] = w_init
+
+        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
+        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
+
+        # Update initial condition for this batch
+        x_scaling = configuration_1.model.ocp.x_scaling
+        X_offset = configuration_1.optimizer.nlp_dict_out['X_offset']
+        nx = len(configuration_1.model.ocp.x0)
+        configuration_1.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
+        configuration_1.optimizer.arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = initial_state_batch / x_scaling
+        configuration_1.simulator.x0_sim = DM(initial_state_batch) / x_scaling
+        configuration_1.model.ocp.x0 = initial_state_batch
+        # Restart iteration counter
+        configuration_1.mpc_iteration = 1
+        configuration_1.simulator.t0_sim = 0
+        configuration_1.simulator.tf_sim = 0 + configuration_1.simulator.t_step_simulator
+        configuration_1.mpc_data = data_do_mpc.mpc_data(configuration_1)
+
+        configuration_1.mpc_data.mpc_parameters[0,:] = configuration_1.simulator.p_real_batch
+        configuration_1.mpc_data.mpc_parameters_est[0,:] = configuration_1.observer.ekf.x_hat[3:]
+
+        # Do not stop until a predefined amount of polymer has been produced
+        while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simulator < configuration_1.optimizer.t_end):
+
+            # Update wind
+            t0_sim = configuration_1.simulator.t0_sim
+            configuration_1.simulator.p_real_batch[-1] = w_mean + w_amp * sin(2*pi*var_t*t0_sim+w_shift)
+
+            # Make one optimizer step (solve the NLP)
+            configuration_1.make_step_optimizer()
+
+            # Make one projection step
+            projection_do_mpc.make_step_projection(configuration_1,"ipopt")
+
+            # Simulate the system one step using the solution obtained in the optimization
+            # configuration_1.make_step_simulator() # NOTE: included in step_observer
+
+            # Make one observer step
+            configuration_1.make_step_observer()
+
+            # Store the information
+            configuration_1.store_mpc_data()
+
+            # Set initial condition constraint for the next iteration
+            configuration_1.prepare_next_iter()
+            print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
+        # Export data
+        data_do_mpc.plot_mpc(configuration_1)
+        data_do_mpc.export_for_learning(configuration_1, "results/data_batch_MPC_proj_" + str(i))
