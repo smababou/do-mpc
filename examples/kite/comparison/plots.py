@@ -10,8 +10,8 @@ plt.rcParams.update({'font.size': 12, 'lines.linewidth' : 2.0,'svg.fonttype': 'n
 # parameters
 path_to_data = 'results/'
 # path_to_data = '../data'
-offset = 50
-n_batches = 50
+offset = 0
+n_batches = 10
 
 # sizes
 nx = 3
@@ -83,18 +83,18 @@ for i in range(n_batches):
     # ax3.plot(t_NN,x_r_NN[:,2],label='NN')
     # ax3.legend()
 
-    # plt.figure()
-    # plt.subplot(np,1,1)
-    # plt.plot(t,p_r[:,0])
-    # plt.plot(t,p_e[:,0])
-    # plt.subplot(np,1,2)
-    # plt.plot(t,p_r[:,1])
-    # plt.plot(t,p_e[:,1])
+    plt.figure()
+    plt.subplot(np,1,1)
+    plt.plot(t,p_r[:,0])
+    plt.plot(t,p_e[:,0])
+    plt.subplot(np,1,2)
+    plt.plot(t,p_r[:,1])
+    plt.plot(t,p_e[:,1])
 
-    # fig, ax = plt.subplots()
-    # ax.plot(t_MPC,u_MPC[:,0],label='MPC')
-    # ax.plot(t_NN,u_NN[:,0],label='NN')
-    # ax.legend()
+    fig, ax = plt.subplots()
+    ax.plot(t_MPC,u_MPC[:,0],label='MPC')
+    ax.plot(t_NN,u_NN[:,0],label='NN')
+    ax.legend()
 
 
 
