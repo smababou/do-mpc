@@ -206,8 +206,9 @@ void make_projection_step(struct edgeAI_ctl *ctl)
 {
 
 	// predict states
-	const uint32_t ems_pred = 50;
-	const c_float dt = 0.005;
+	const uint32_t ems_pred = 4;
+	const c_float ems_pred_f = 4.0;
+	const c_float dt = 0.15;
 	uint32_t i,j;
 	c_float r1[PARAM_SETTINGS], r2[PARAM_SETTINGS], xp1[STATES], xp2[STATES], xp3[STATES], xp4[STATES];
 	c_float uk = (c_float) ctl->out[0];
@@ -223,31 +224,31 @@ void make_projection_step(struct edgeAI_ctl *ctl)
 
 	for (i=0; i<ems_pred; i++) {
 
-		// state xk[0]
+		// state theta
 		r1[0] =(4.0-(0.028*pow(uk,2)));
 		r1[1] =(4.0-(0.028*pow(uk,2)));
 		r1[2] =(6.0-(0.028*pow(uk,2)));
 		r1[3] =(6.0-(0.028*pow(uk,2)));
-		xp1[0] = xp1[0] + dt/ems_pred * ((((7.0*r1[0])*cos(xp1[0]))/400.0)*(cos(xp1[2])-(tan(xp1[0])/r1[0])));
-		xp2[0] = xp2[0] + dt/ems_pred * ((((13.0*r1[1])*cos(xp2[0]))/400.0)*(cos(xp2[2])-(tan(xp2[0])/r1[1])));
-		xp3[0] = xp3[0] + dt/ems_pred * ((((7.0*r1[2])*cos(xp3[0]))/400.0)*(cos(xp3[2])-(tan(xp3[0])/r1[2])));
-		xp4[0] = xp4[0] + dt/ems_pred * ((((13.0*r1[3])*cos(xp4[0]))/400.0)*(cos(xp4[2])-(tan(xp4[0])/r1[3])));
+		xp1[0] = xp1[0] + dt/ems_pred_f * ((((7.0*r1[0])*cos(xp1[0]))/400.0)*(cos(xp1[2])-(tan(xp1[0])/r1[0])));
+		xp2[0] = xp2[0] + dt/ems_pred_f * ((((13.0*r1[1])*cos(xp2[0]))/400.0)*(cos(xp2[2])-(tan(xp2[0])/r1[1])));
+		xp3[0] = xp3[0] + dt/ems_pred_f * ((((7.0*r1[2])*cos(xp3[0]))/400.0)*(cos(xp3[2])-(tan(xp3[0])/r1[2])));
+		xp4[0] = xp4[0] + dt/ems_pred_f * ((((13.0*r1[3])*cos(xp4[0]))/400.0)*(cos(xp4[2])-(tan(xp4[0])/r1[3])));
 
 		// state phi
-		xp1[1] = xp1[1] + dt/ems_pred * (-((((7.0*(4.0-(0.028*pow(uk,2))))*cos(xp1[0]))/(400.0*sin(xp1[0])))*sin(xp1[2])));
-		xp2[1] = xp2[1] + dt/ems_pred * (-((((13.0*(4.0-(0.028*pow(uk,2))))*cos(xp2[0]))/(400.0*sin(xp2[0])))*sin(xp2[2])));
-		xp3[1] = xp3[1] + dt/ems_pred * (-((((7.0*(6.0-(0.028*pow(uk,2))))*cos(xp3[0]))/(400.0*sin(xp3[0])))*sin(xp3[2])));
-		xp3[1] = xp3[1] + dt/ems_pred * (-((((13.0*(6.0-(0.028*pow(uk,2))))*cos(xp3[0]))/(400.0*sin(xp3[0])))*sin(xp3[2])));
+		xp1[1] = xp1[1] + dt/ems_pred_f * (-((((7.0*(4.0-(0.028*pow(uk,2))))*cos(xp1[0]))/(400.0*sin(xp1[0])))*sin(xp1[2])));
+		xp2[1] = xp2[1] + dt/ems_pred_f * (-((((13.0*(4.0-(0.028*pow(uk,2))))*cos(xp2[0]))/(400.0*sin(xp2[0])))*sin(xp2[2])));
+		xp3[1] = xp3[1] + dt/ems_pred_f * (-((((7.0*(6.0-(0.028*pow(uk,2))))*cos(xp3[0]))/(400.0*sin(xp3[0])))*sin(xp3[2])));
+		xp4[1] = xp4[1] + dt/ems_pred_f * (-((((13.0*(6.0-(0.028*pow(uk,2))))*cos(xp4[0]))/(400.0*sin(xp4[0])))*sin(xp4[2])));
 
-		// state xk[2]
+		// state psi
 		r2[0] =((7.0*(4.0-(0.028*pow(uk,2))))*cos(xp1[0]));
 		r2[1] =((13.0*(4.0-(0.028*pow(uk,2))))*cos(xp2[0]));
 		r2[2] =((7.0*(6.0-(0.028*pow(uk,2))))*cos(xp3[0]));
 		r2[3] =((13.0*(6.0-(0.028*pow(uk,2))))*cos(xp4[0]));
-		xp1[2] = xp1[2] + dt/ems_pred * (((r2[0]/400.0)*uk)-(((r2[0]/(400.0*sin(xp1[0])))*sin(xp1[2]))*cos(xp1[0])));
-		xp2[2] = xp2[2] + dt/ems_pred * (((r2[1]/400.0)*uk)-(((r2[1]/(400.0*sin(xp2[0])))*sin(xp2[2]))*cos(xp2[0])));
-		xp3[2] = xp3[2] + dt/ems_pred * (((r2[2]/400.0)*uk)-(((r2[2]/(400.0*sin(xp3[0])))*sin(xp3[2]))*cos(xp3[0])));
-		xp4[2] = xp4[2] + dt/ems_pred * (((r2[3]/400.0)*uk)-(((r2[3]/(400.0*sin(xp4[0])))*sin(xp4[2]))*cos(xp4[0])));
+		xp1[2] = xp1[2] + dt/ems_pred_f * (((r2[0]/400.0)*uk)-(((r2[0]/(400.0*sin(xp1[0])))*sin(xp1[2]))*cos(xp1[0])));
+		xp2[2] = xp2[2] + dt/ems_pred_f * (((r2[1]/400.0)*uk)-(((r2[1]/(400.0*sin(xp2[0])))*sin(xp2[2]))*cos(xp2[0])));
+		xp3[2] = xp3[2] + dt/ems_pred_f * (((r2[2]/400.0)*uk)-(((r2[2]/(400.0*sin(xp3[0])))*sin(xp3[2]))*cos(xp3[0])));
+		xp4[2] = xp4[2] + dt/ems_pred_f * (((r2[3]/400.0)*uk)-(((r2[3]/(400.0*sin(xp4[0])))*sin(xp4[2]))*cos(xp4[0])));
 
 	}
 
@@ -275,12 +276,11 @@ void make_projection_step(struct edgeAI_ctl *ctl)
 	}
 
 	// if violation -> projection
-	// (v1 || v2 || v3 || v4)
-	if (1) {
+	if (v1 || v2 || v3 || v4) {
 
 		// update linear cost
 		c_float q[] = {-uk, 0.0, 0.0, 0.0, 0.0};
-		osqp_update_lin_cost(&workspace, q);
+		c_int e_q = osqp_update_lin_cost(&workspace, q);
 
 		// update constraint matrix
 		c_float H_1[] = { L_tether*cos(xp1[0])*cos(xp1[1]), -L_tether*sin(xp1[0])*sin(xp1[1]), 0 };
@@ -329,35 +329,36 @@ void make_projection_step(struct edgeAI_ctl *ctl)
 		Ht_3 = H_3[0]*Bt_3[0] + H_3[1]*Bt_3[1] + H_3[2]*Bt_3[2];
 		Ht_4 = H_4[0]*Bt_4[0] + H_4[1]*Bt_4[1] + H_4[2]*Bt_4[2];
 
-		c_float A_new[16], A_new_index[16];
+		c_float A_new[16];
+		c_int A_new_index[16];
 
 		A_new[0] = Bt_1[0];
 		A_new[1] = Bt_1[1];
-		A_new[3] = Bt_1[2];
+		A_new[2] = Bt_1[2];
 
-		A_new[4] = Bt_2[0];
-		A_new[5] = Bt_2[1];
-		A_new[6] = Bt_2[2];
+		A_new[3] = Bt_2[0];
+		A_new[4] = Bt_2[1];
+		A_new[5] = Bt_2[2];
 
-		A_new[7] = Bt_3[0];
-		A_new[8] = Bt_3[1];
-		A_new[9] = Bt_3[2];
+		A_new[6] = Bt_3[0];
+		A_new[7] = Bt_3[1];
+		A_new[8] = Bt_3[2];
 
-		A_new[10] = Bt_4[0];
-		A_new[11] = Bt_4[1];
-		A_new[12] = Bt_4[2];
+		A_new[9] = Bt_4[0];
+		A_new[10] = Bt_4[1];
+		A_new[11] = Bt_4[2];
 
-		A_new[13] = Ht_1;
-		A_new[14] = Ht_2;
-		A_new[15] = Ht_3;
-		A_new[16] = Ht_4;
+		A_new[12] = Ht_1;
+		A_new[13] = Ht_2;
+		A_new[14] = Ht_3;
+		A_new[15] = Ht_4;
 
 		c_int i;
 		for (i=0; i<16; i++) {
 			A_new_index[i] = i;
 		}
 
-		osqp_update_A(&workspace,A_new_index,A_new,16);
+		c_int e_A = osqp_update_A(&workspace,A_new,A_new_index,16);
 
 		// update bounds
 		c_float l[] = {
@@ -443,12 +444,12 @@ void make_projection_step(struct edgeAI_ctl *ctl)
 		u[14] = u[14] - h3 + Ht_3*uk;
 		u[15] = u[15] - h4 + Ht_4*uk;
 
-		osqp_update_bounds(&workspace, l, u);
+		c_int e_bounds = osqp_update_bounds(&workspace, l, u);
 
 		// solve optimization problem
 		osqp_solve(&workspace);
 
-		update optimal solution
+		// update optimal solution
 		ctl->out[0] = (real_t) (&workspace)->solution->x[0];
 
 	}

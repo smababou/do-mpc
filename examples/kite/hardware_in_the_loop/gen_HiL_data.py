@@ -29,8 +29,7 @@ import serial
 from time import sleep
 
 # number of batches to generate data from
-n_batches = 3
-offset = 2
+offset = 3
 controller_number = 2
 neural_network = True # NOTE: if false MPC instead of NN
 # initialize the problem (first lines of do_mpc.py)
@@ -69,7 +68,7 @@ if neural_network:
     loaded_model.load_weights(filename+".h5")
     print("Loaded model from disk")
 
-for i in range(offset, offset + n_batches):
+for i in range(offset, offset + 1):
 
     # Create the objects for each module
     model_1 = template_model.model()
