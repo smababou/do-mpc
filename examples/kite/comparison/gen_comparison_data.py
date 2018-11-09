@@ -24,9 +24,9 @@ import data_do_mpc
 import pdb
 
 # number of batches to generate data from
-n_batches = 10
+n_batches = 100
 offset = 0
-controller_number = 1
+controller_number = 2
 
 """
 -----------------------------------------------
@@ -68,7 +68,8 @@ Evaluate NMPC
 -----------------------------------------------
 """
 
-for i in range(offset, offset + n_batches):
+# for i in range(offset, offset + n_batches):
+if False:
 
     # Create the objects for each module
     model_1 = template_model.model()
@@ -174,7 +175,7 @@ for i in range(offset, offset + n_batches):
     model_1 = template_model.model()
     # Create an optimizer object based on the template and a model
     optimizer_1 = template_optimizer.optimizer(model_1)
-    optimizer_1.t_step = 0.05
+    optimizer_1.t_step = 0.15
     # Create an observer object based on the template and a model
     observer_1 = template_EKF.observer(model_1)
     # Create a simulator object based on the template and a model
