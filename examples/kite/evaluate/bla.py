@@ -11,8 +11,8 @@ plt.rcParams.update({'font.size': 12, 'lines.linewidth' : 2.0,'svg.fonttype': 'n
 # path_to_data = '../hardware_in_the_loop/results'
 # path_to_data = '../data/test_proj'
 path_to_data = '../comparison/results/'
-offset = 0
-n_batches = 10
+offset = 3
+n_batches = 3
 
 # sizes
 nx = 3
@@ -29,7 +29,7 @@ constraint = NP.sinh(h_min/(NP.cos(c_plot)*L_tether))*360/(2*pi)
 # load data
 data = []
 for i in range(offset, offset + n_batches):
-    data.append(NP.load(path_to_data + "/data_batch_NN_" + str(i) + ".npy"))
+    data.append(NP.load(path_to_data + "/data_batch_NN_ekf_" + str(i) + ".npy"))
 
 # start plotting
 plt.ion()
@@ -62,15 +62,15 @@ for i in range(offset, offset + n_batches):
     plt.subplot(nx,1,3)
     plt.plot(t,x_r[:,2])
     plt.plot(t,x_e[:,2])
-    #
-    # plt.figure()
-    # plt.subplot(np,1,1)
-    # plt.plot(t,p_r[:,0])
-    # plt.plot(t,p_e[:,0])
-    # plt.subplot(np,1,2)
-    # plt.plot(t,p_r[:,1])
-    # plt.plot(t,p_e[:,1])
-    #
+
+    plt.figure()
+    plt.subplot(np,1,1)
+    plt.plot(t,p_r[:,0])
+    plt.plot(t,p_e[:,0])
+    plt.subplot(np,1,2)
+    plt.plot(t,p_r[:,1])
+    plt.plot(t,p_e[:,1])
+
     # fig, ax = plt.subplots()
     # ax.plot(t,u[:,0])
 

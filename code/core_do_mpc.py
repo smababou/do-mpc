@@ -27,6 +27,7 @@ import observer_do_mpc
 from casadi import *
 from casadi.tools import *
 import data_do_mpc
+import projection_do_mpc_backup_2
 import projection_do_mpc
 import numpy as NP
 from scipy.linalg import expm
@@ -213,7 +214,7 @@ class configuration:
         self.optimizer = optimizer
         self.observer = observer
         self.simulator = simulator
-        self.projector = projection_do_mpc.projector(self)
+        self.projector = projection_do_mpc_backup_2.projector(self)
         # The data structure
         self.mpc_data = data_do_mpc.mpc_data(self)
         # The solver

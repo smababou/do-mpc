@@ -31,7 +31,7 @@ nt = 1
 
 n_layers = 6
 n_neurons = 10
-act = 'tanh'
+act = 'relu'
 output_act = 'linear'
 
 for i in range(n_batches_train_test_1):
@@ -91,7 +91,7 @@ main_output = Dense(nu, activation = output_act, kernel_regularizer=regularizers
 
 model = Model(inputs = main_input, outputs = main_output)
 model.compile(loss='mse',optimizer='adam')
-model.fit(x_train_1, y_train_1,epochs=500,batch_size=100)
+model.fit(x_train_1, y_train_1,epochs=100,batch_size=100)
 pdb.set_trace()
 score = model.evaluate(x_test_1, y_test_1, batch_size=128)
 print("The test score is: ")

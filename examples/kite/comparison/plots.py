@@ -11,7 +11,7 @@ plt.rcParams.update({'font.size': 12, 'lines.linewidth' : 2.0,'svg.fonttype': 'n
 path_to_data = 'results/'
 # path_to_data = '../data'
 offset = 0
-n_batches = 1
+n_batches = 3
 
 # sizes
 nx = 3
@@ -32,7 +32,7 @@ for i in range(offset, offset + n_batches):
 
 data_NN = []
 for i in range(offset, offset + n_batches):
-    data_NN.append(NP.load(path_to_data + "data_batch_NN_" + str(i) + ".npy"))
+    data_NN.append(NP.load(path_to_data + "data_batch_NN_extreme_" + str(i) + ".npy"))
 
 data_MPC_P = []
 for i in range(offset, offset + n_batches):
@@ -40,7 +40,7 @@ for i in range(offset, offset + n_batches):
 
 data_NN_P = []
 for i in range(offset, offset + n_batches):
-    data_NN_P.append(NP.load(path_to_data + "data_batch_NN_proj_" + str(i) + ".npy"))
+    data_NN_P.append(NP.load(path_to_data + "data_batch_NN_proj_extreme_" + str(i) + ".npy"))
 
 # start plotting
 plt.ion()
@@ -75,9 +75,9 @@ for i in range(n_batches):
     p_e_NN_P = data_NN_P[i][:,1+2*nx+nu+np:1+2*nx+nu+2*np]
 
     fig, ax = plt.subplots()
-    ax.plot(x_r_MPC[:,1]*180/pi,x_r_MPC[:,0]*180/pi,'-',label='MPC')
+    # ax.plot(x_r_MPC[:,1]*180/pi,x_r_MPC[:,0]*180/pi,'-',label='MPC')
     ax.plot(x_r_NN[:,1]*180/pi,x_r_NN[:,0]*180/pi,'-',label='NN')
-    ax.plot(x_r_MPC_P[:,1]*180/pi,x_r_MPC_P[:,0]*180/pi,'-',label='MPC with projection')
+    # ax.plot(x_r_MPC_P[:,1]*180/pi,x_r_MPC_P[:,0]*180/pi,'-',label='MPC with projection')
     ax.plot(x_r_NN_P[:,1]*180/pi,x_r_NN_P[:,0]*180/pi,'-',label='NN with projection')
     # ax.plot(x_e[:,1]*180/pi,x_e[:,0]*180/pi,'--',label='est')
     ax.plot(c_plot*360/(2*pi),constraint,c='#000000',label='con',linewidth=3.0)
@@ -109,16 +109,18 @@ for i in range(n_batches):
 
     # plt.figure()
     # plt.subplot(np,1,1)
-    # plt.plot(t,p_r[:,0])
-    # plt.plot(t,p_e[:,0])
+    # plt.plot(t_NN,p_r_NN[:,0])
+    # # plt.plot(t,p_e[:,0])
     # plt.subplot(np,1,2)
-    # plt.plot(t,p_r[:,1])
-    # plt.plot(t,p_e[:,1])
+    # plt.plot(t_NN,p_r_NN[:,1])
+    # # plt.plot(t,p_e[:,1])
 
-    # fig, ax = plt.subplots()
+    fig, ax = plt.subplots()
     # ax.plot(t_MPC,u_MPC[:,0],label='MPC')
-    # ax.plot(t_NN,u_NN[:,0],label='NN')
-    # ax.legend()
+    ax.plot(t_NN,u_NN[:,0],label='NN')
+    # ax.plot(t_MPC_P,u_MPC_P[:,0],label='MPC_P')
+    ax.plot(t_NN_P,u_NN_P[:,0],label='NN_P')
+    ax.legend()
 
 
 

@@ -42,7 +42,7 @@ def optimizer(model):
     # Sampling time
     t_step = 0.15
     # Simulation time
-    t_end = 70.0
+    t_end = 150.0
     # Choose type of state discretization (collocation or multiple-shooting)
     state_discretization = 'collocation'
     # Degree of interpolating polynomials: 1 to 5

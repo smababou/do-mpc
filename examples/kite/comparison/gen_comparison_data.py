@@ -22,17 +22,20 @@ import core_do_mpc
 # Import do-mpc plotting and data managament functions
 import data_do_mpc
 import projection_do_mpc
+import projection_do_mpc_backup_2
 import pdb
 
 # number of batches to generate data from
-n_batches = 119
-offset = 1
+n_batches = 5
+offset = 0
 controller_number = 2
 
-eval_NN = True
+eval_NN = False
 eval_NN_P = True
-eval_MPC = True
-eval_MPC_P = True
+eval_MPC = False
+eval_MPC_P = False
+
+settings = "extreme"
 
 """
 -----------------------------------------------
@@ -53,7 +56,10 @@ Load parameter settings
 """
 
 # |E_batch|w_mean|var_t|w_amp|w_shift|
-parameter_settings = NP.load('../parameter_settings/table_of_parameter_settings.npy')
+if settings == "extreme":
+    parameter_settings = NP.load('../parameter_settings/table_of_parameter_settings_extreme.npy')
+else:
+    parameter_settings = NP.load('../parameter_settings/table_of_parameter_settings.npy')
 
 """
 -----------------------------------------------
@@ -123,8 +129,8 @@ if eval_NN:
         # configuration_1.simulator.p_real_batch[1] = c_batch
         configuration_1.simulator.p_real_batch[-1] = w_init
 
-        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.01)
-        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.02)
+        configuration_1.observer.ekf.x_hat[3] = E_batch #+ NP.random.normal(0,0.15)
+        configuration_1.observer.ekf.x_hat[-1] = w_init #+ NP.random.normal(0,0.3)
 
         # Update initial condition for this batch
         x_scaling = configuration_1.model.ocp.x_scaling
@@ -175,11 +181,14 @@ if eval_NN:
             print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
         # Export data
         data_do_mpc.plot_mpc(configuration_1)
-        data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_" + str(i))
+        if settings == "extreme":
+            data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_extreme_" + str(i))
+        else:
+            data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_" + str(i))
 
 """
 -----------------------------------------------
-Evaluate neural network without projection
+Evaluate neural network with projection
 -----------------------------------------------
 """
 
@@ -197,6 +206,7 @@ if eval_NN_P:
         simulator_1 = template_simulator.simulator(model_1)
         # Create a configuration
         configuration_1 = core_do_mpc.configuration(model_1, optimizer_1, observer_1, simulator_1)
+        configuration_1.loaded_model = loaded_model
 
         # Set up the solvers
         configuration_1.observer.observed_states = configuration_1.model.ocp.x0
@@ -217,8 +227,8 @@ if eval_NN_P:
         # configuration_1.simulator.p_real_batch[1] = c_batch
         configuration_1.simulator.p_real_batch[-1] = w_init
 
-        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
-        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
+        configuration_1.observer.ekf.x_hat[3] = E_batch #+ NP.random.normal(0,0.15)
+        configuration_1.observer.ekf.x_hat[-1] = w_init #+ NP.random.normal(0,0.3)
 
         # Update initial condition for this batch
         x_scaling = configuration_1.model.ocp.x_scaling
@@ -253,13 +263,13 @@ if eval_NN_P:
             u_opt_scaled = NP.squeeze(loaded_model.predict(x_in_scaled))
             u_opt = u_opt_scaled * (u_ub - u_lb) + u_lb
             u_opt_lim = NP.maximum(NP.minimum(u_opt,u_ub),u_lb)
-            configuration_1.optimizer.u_mpc = (u_opt_lim)
+            configuration_1.optimizer.u_mpc = u_opt_lim
 
             # Simulate the system one step using the solution obtained in the optimization
             # configuration_1.make_step_simulator() # NOTE: included in step_observer
 
             # projection when constraint probaby will be violated
-            projection_do_mpc .make_step_projection(configuration_1,"osqp")
+            projection_do_mpc_backup_2 .make_step_projection(configuration_1,"ipopt")
 
             # Make one observer step
             configuration_1.make_step_observer()
@@ -271,8 +281,11 @@ if eval_NN_P:
             configuration_1.prepare_next_iter()
             print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
         # Export data
-        data_do_mpc.plot_mpc(configuration_1)
-        data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_proj_" + str(i))
+        # data_do_mpc.plot_mpc(configuration_1)
+        if settings == "extreme":
+            data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_proj_extreme_" + str(i))
+        else:
+            data_do_mpc.export_for_learning(configuration_1, "results/data_batch_NN_" + str(i))
 
 """
 -----------------------------------------------
@@ -313,8 +326,8 @@ if eval_MPC:
         # configuration_1.simulator.p_real_batch[1] = c_batch
         configuration_1.simulator.p_real_batch[-1] = w_init
 
-        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
-        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
+        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.15)
+        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.3)
 
         # Update initial condition for this batch
         x_scaling = configuration_1.model.ocp.x_scaling
@@ -356,7 +369,7 @@ if eval_MPC:
             configuration_1.prepare_next_iter()
             print("--- Batch number " + str(i) + " --- T = " + str(t0_sim) + "s ---")
         # Export data
-        data_do_mpc.plot_mpc(configuration_1)
+        # data_do_mpc.plot_mpc(configuration_1)
         data_do_mpc.export_for_learning(configuration_1, "results/data_batch_MPC_" + str(i))
 
 """
@@ -367,7 +380,7 @@ Evaluate NMPC nonlinear with projection
 
 if eval_MPC_P:
 
-    for i in range(offset, offset + n_batches):
+    for i in [99,103]:#range(offset, offset + n_batches):
 
         # Create the objects for each module
         model_1 = template_model.model()
@@ -398,8 +411,8 @@ if eval_MPC_P:
         # configuration_1.simulator.p_real_batch[1] = c_batch
         configuration_1.simulator.p_real_batch[-1] = w_init
 
-        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.05)
-        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.1)
+        configuration_1.observer.ekf.x_hat[3] = E_batch + NP.random.normal(0,0.15)
+        configuration_1.observer.ekf.x_hat[-1] = w_init + NP.random.normal(0,0.3)
 
         # Update initial condition for this batch
         x_scaling = configuration_1.model.ocp.x_scaling
