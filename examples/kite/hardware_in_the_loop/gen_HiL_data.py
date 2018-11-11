@@ -29,10 +29,12 @@ import serial
 from time import sleep
 
 # number of batches to generate data from
-offset = 3
+offset = 4
 controller_number = 2
 neural_network = True # NOTE: if false MPC instead of NN
 # initialize the problem (first lines of do_mpc.py)
+eval_time_dnn_list = []
+eval_time_ekf_list = []
 
 """
 -----------------------------------------------
@@ -142,6 +144,11 @@ for i in range(offset, offset + 1):
         # get optimal input
         while (arduino.in_waiting < 1):
             sleep(0.05)
+
+        eval_time_dnn_byte = arduino.readline()
+        eval_time_dnn = float(eval_time_dnn_byte.decode("utf8"))
+        eval_time_dnn_list.append(eval_time_dnn)
+
         u_opt_byte = arduino.readline()
         u_opt = float(u_opt_byte.decode("utf8"))
         u_opt_lim = NP.maximum(NP.minimum(u_opt,10.0),-10.0)
@@ -160,6 +167,10 @@ for i in range(offset, offset + 1):
 
             while (arduino.in_waiting < 1):
                 sleep(0.05)
+
+            eval_time_ekf_byte = arduino.readline()
+            eval_time_ekf = float(eval_time_ekf_byte.decode("utf8"))
+            eval_time_ekf_list.append(eval_time_ekf)
 
             is_cont_byte = arduino.readline();
             is_cont = is_cont_byte.decode("utf8")
@@ -192,3 +203,8 @@ for i in range(offset, offset + 1):
     # Export data
     data_do_mpc.plot_mpc(configuration_1)
     data_do_mpc.export_for_learning(configuration_1, "results/data_batch_" + str(i))
+
+mean_eval_time_dnn = NP.mean(NP.vstack(eval_time_dnn_list))
+print("The average computation time for the DNN: " + str(mean_eval_time_dnn))
+mean_eval_time_dnn = NP.mean(NP.vstack(eval_time_ekf_list))
+print("The average computation time for the EKF: " + str(mean_eval_time_dnn))
