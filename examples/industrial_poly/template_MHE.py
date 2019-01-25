@@ -133,7 +133,7 @@ def observer(model):
 
     noise = 'gaussian'
     # mag = NP.ones(ny)*0.001 #standard deviation
-    mag = NP.array([0.1, 0.001, 0.001, 0.001, 0.001, 0.001, 0.0])
+    mag = NP.array([0.1, 0.01, 0.01, 0.01, 0.01, 0.01, 0.001])
 
 
     """
