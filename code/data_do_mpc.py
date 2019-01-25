@@ -108,13 +108,23 @@ def export_for_learning(configuration, name):
         states = data.mpc_states
         states_est = data.mpc_states_est
         controls = data.mpc_control
-        params = data.mpc_parameters
+        if configuration.observer.method == "EKF":
+            params = data.mpc_parameters
+        else:
+            params= data.mpc_parameters[:,:2]
         params_est = data.mpc_parameters_est
         aux = NP.append(time,states, axis = 1)
-        aux_est = NP.append(aux,states_est, axis=1)
+        if configuration.observer.method == "EKF":
+            aux_est = NP.append(aux,states_est, axis=1)
+        else:
+            n_bla = states.shape[0]
+            aux_est = NP.append(aux,NP.zeros([n_bla,3]), axis=1)
         aux2 = NP.append(aux_est,controls, axis = 1)
         aux3 = NP.append(aux2,params, axis = 1)
-        mpc_data_for_learning = NP.append(aux3,params_est, axis = 1)
+        if configuration.observer.method == "EKF":
+            mpc_data_for_learning = NP.append(aux3,params_est, axis = 1)
+        else:
+            mpc_data_for_learning = NP.append(aux3,NP.zeros([n_bla,2]),axis=1)
         NP.save(export_name,mpc_data_for_learning)
         print("Exporting data for learning as ''" + export_name + "''")
 

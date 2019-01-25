@@ -24,6 +24,7 @@ class ekf:
             #     f = vertcat(f,DM(NP.zeros(np)))
             # else: # NOTE: somehow add handling of discrete systems
             f = vertcat(f,DM(NP.ones(np)))
+            # f = vertcat(f,DM(NP.ones(2)))
         h = model.y
         # h = substitute(model_observer.y,u,u*model_observer.ocp.u_scaling)
         # h = substitute(h,x,x*model_observer.ocp.x_scaling)/model_observer.ocp.y_scaling
@@ -37,6 +38,8 @@ class ekf:
         if param_est:
             F = jacobian(f,vertcat(x,p))
             H = jacobian(h,vertcat(x,p))
+            # F = jacobian(f,vertcat(x,p[:2]))
+            # H = jacobian(h,vertcat(x,p[:2]))
         else:
             F = jacobian(f,x)
             H = jacobian(h,x)
@@ -124,13 +127,14 @@ def make_step_observer(conf):
         rep = int(round(conf.optimizer.t_step/conf.simulator.t_step_simulator))
         for n_rep in range(rep):
             conf.make_step_simulator()
-            conf.store_mpc_data()
+            # conf.store_mpc_data()
         conf.observer.observed_states = conf.simulator.xf_sim
 
     elif conf.observer.method == 'EKF':
         # preprocess data and derive info
         nx = conf.model.x.size(1)
         np = conf.model.p.size(1)
+        # np = 2
         if conf.observer.param_est:
             nxp = nx+np
         else:
@@ -159,11 +163,14 @@ def make_step_observer(conf):
             #         xk[:nx,0]  = NP.squeeze((conf.simulator.simulator(x0 = xk[:nx,:], p = vertcat(u_mpc,p_real,tv_p_real)))['xf'])
             # NOTE: for realistic results, use state prediction without integration
             xk[:nx,0] = NP.squeeze(conf.observer.ekf.x_pred(xk[:nx,:],u_mpc,xk[nx:,0]))
+            # xk[:nx,0] = NP.squeeze(conf.observer.ekf.x_pred(xk[:nx,:],u_mpc,NP.hstack([xk[nx:nx+2,0],0.0])))
 
             # Predict covariance
             if conf.observer.param_est:
                 H = conf.observer.ekf.H(xk[:nx],u_mpc,xk[nx:],tv_p_real)
                 F = conf.observer.ekf.F(conf.observer.ekf.x_hat[:nx],u_mpc,xk[nx:],tv_p_real)
+                # H = conf.observer.ekf.H(xk[:nx],u_mpc,NP.hstack([xk[nx:nx+2,0],0.0]),tv_p_real)
+                # F = conf.observer.ekf.F(conf.observer.ekf.x_hat[:nx],u_mpc,NP.hstack([xk[nx:nx+2,0],0.0]),tv_p_real)
             else:
                 H = conf.observer.ekf.H(xk[:nx],u_mpc,p_real,tv_p_real)
                 F = conf.observer.ekf.F(conf.observer.ekf.x_hat,u_mpc,p_real,tv_p_real)
@@ -180,6 +187,7 @@ def make_step_observer(conf):
             # residual
             if conf.observer.param_est:
                 yk = zk - conf.observer.meas_fcn(xk[:nx],u_mpc,xk[nx:],tv_p_real)
+                # yk = zk - conf.observer.meas_fcn(xk[:nx],u_mpc,NP.hstack([xk[nx:nx+2,0],0.0]),tv_p_real)
             else:
                 yk = zk - conf.observer.meas_fcn(xk,u_mpc,p_real,tv_p_real)
 
@@ -189,7 +197,7 @@ def make_step_observer(conf):
             #update covariance estimate
             conf.observer.ekf.x_hat = NP.squeeze(xk)
             conf.observer.ekf.P = mtimes((NP.diag(NP.ones(nxp)) - mtimes(K,H)),P)
-            conf.store_est_data()
+            # conf.store_est_data()
 
         if conf.observer.open_loop:
             conf.observer.observed_states = conf.simulator.xf_sim

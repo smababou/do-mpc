@@ -27,8 +27,8 @@ import observer_do_mpc
 from casadi import *
 from casadi.tools import *
 import data_do_mpc
-import projection_do_mpc_backup_2
-import projection_do_mpc
+# import projection_do_mpc_backup_2
+# import projection_do_mpc
 import numpy as NP
 from scipy.linalg import expm
 import pdb
@@ -214,14 +214,14 @@ class configuration:
         self.optimizer = optimizer
         self.observer = observer
         self.simulator = simulator
-        self.projector = projection_do_mpc_backup_2.projector(self)
+        # self.projector = projection_do_mpc_backup_2.projector(self)
         # The data structure
         self.mpc_data = data_do_mpc.mpc_data(self)
         # The solver
         self.setup_solver()
 
-    def make_step_projection(self):
-        projection_do_mpc.make_step_projection(self)
+    # def make_step_projection(self):
+    #     projection_do_mpc.make_step_projection(self)
 
     def setup_solver(self):
         # Call setup_nlp to generate the NLP
@@ -332,7 +332,8 @@ class configuration:
         mpc_iteration = self.simulator.mpc_iteration - 1 #Because already increased in the simulator
         data = self.mpc_data
         data.mpc_states = NP.append(data.mpc_states, [self.simulator.xf_sim], axis = 0)
-        data.mpc_states_est = NP.append(data.mpc_states_est, NP.reshape(self.observer.ekf.x_hat[:nx],(1,-1)),axis = 0) # NOTE: added for learning
+        if self.observer.method == "EKF":
+            data.mpc_states_est = NP.append(data.mpc_states_est, NP.reshape(self.observer.ekf.x_hat[:nx],(1,-1)),axis = 0) # NOTE: added for learning
         data.mpc_control = NP.append(data.mpc_control, NP.reshape(self.optimizer.u_mpc,(1,-1)), axis = 0)
         #data.mpc_alg = NP.append(data.mpc_alg, [NP.zeros(NP.size(self.model.z))], axis = 0) # TODO: To be completed for DAEs
         data.mpc_time = NP.append(data.mpc_time, [[self.simulator.t0_sim]], axis = 0)
@@ -342,7 +343,9 @@ class configuration:
         data.mpc_cpu = NP.append(data.mpc_cpu, [[stats['t_wall_solver']]], axis = 0)
         # data.mpc_parameters = NP.append(data.mpc_parameters, [self.simulator.p_real_now(self.simulator.t0_sim)], axis = 0)
         data.mpc_parameters = NP.append(data.mpc_parameters, NP.reshape(self.simulator.p_real_batch,(1,-1)), axis = 0)
-        data.mpc_parameters_est = NP.append(data.mpc_parameters_est, NP.reshape(self.observer.ekf.x_hat[nx:],(1,-1)), axis = 0)
+        if self.observer.method == "EKF":
+            data.mpc_parameters_est = NP.append(data.mpc_parameters_est, NP.reshape(self.observer.ekf.x_hat[nx:],(1,-1)), axis = 0)
+            # data.mpc_parameters_est = NP.append(data.mpc_parameters_est, NP.reshape(NP.hstack([self.observer.ekf.x_hat[nx:],0.0]),(1,-1)), axis = 0)
 
 
     def store_est_data(self):
