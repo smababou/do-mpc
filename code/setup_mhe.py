@@ -576,9 +576,9 @@ def setup_mhe(model, observer, param_dict):
                 ubg.append(cons_ub)
 
                 # fix control inputs
-                g.append(U_ks - U_MEAS[:,k])
-                lbg.append(NP.zeros([nu]))
-                ubg.append(NP.zeros([nu]))
+                # g.append(U_ks - U_MEAS[:,k])
+                # lbg.append(NP.zeros([nu]))
+                # ubg.append(NP.zeros([nu]))
 
                 # Add terminal constraints
                 if k == nk - 1:
@@ -592,7 +592,7 @@ def setup_mhe(model, observer, param_dict):
                     [J_ksb] = mfcn.call([X_ks, X_EST, P_ksb, TV_P[:, k]])
                     J += J_ksb
                 Y_ks = meas_fcn(xf_ksb, U_ks, P_ksb, TV_P[:, k])
-                if k > 0:
+                if k >= 0:
                     [J_ksb] = lagrange_fcn.call([X_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k], P_ksb, TV_P[:, k]])
                     J += J_ksb #omega[k] * J_ksb
 
