@@ -576,9 +576,9 @@ def setup_mhe(model, observer, param_dict):
                 ubg.append(cons_ub)
 
                 # fix control inputs
-                # g.append(U_ks - U_MEAS[:,k])
-                # lbg.append(NP.zeros([nu]))
-                # ubg.append(NP.zeros([nu]))
+                g.append(U_ks - U_MEAS[:,k])
+                lbg.append(NP.zeros([nu]))
+                ubg.append(NP.zeros([nu]))
 
                 # Add terminal constraints
                 if k == nk - 1:
