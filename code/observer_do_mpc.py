@@ -214,6 +214,7 @@ def make_step_observer(conf):
             for sim in range(rep_sim):
                 conf.make_step_simulator()
             make_measurement(conf)
+            # pdb.set_trace()
             if conf.observer.mhe.count >= conf.observer.mhe.n_horizon:
                 X_offset = conf.observer.mhe.mhe_dict_out['X_offset']
                 U_offset = conf.observer.mhe.mhe_dict_out['U_offset']
@@ -223,13 +224,27 @@ def make_step_observer(conf):
                 # update parameters of optimizer
                 param = arg['p']
                 param["Y_MEAS"] = data.y_meas[count-nk:count,:].T
-                param["X_EST"] = NP.reshape(data.est_states[count-nk-1,:],(-1,1))
-                param["U_MEAS"] = data.u_meas[count-nk:count,:].T
+                param["X_EST"] = NP.reshape(data.est_states[count-nk+1,:],(-1,1))
+                # param["X_EST"] = NP.reshape(data.mpc_states[count-nk,:],(-1,1))
+                # pdb.set_trace()
+                # param["U_MEAS"] = data.u_meas[count-nk:count,:].T
+                param["U_MEAS"] = horzcat(data.u_meas[count-nk+1:count+1,:].T, conf.optimizer.u_mpc)
                 arg['p'] = param
                 # optimization
+                # "Hard" fix of the initial point of the mhe window
+                arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = data.est_states[count-nk+1,:]
+                arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = data.est_states[count-nk+1,:]
+                # "Hard" fix of the initial point of the mhe window to the real state (unrealistic)
+                # arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]
+                # arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]
+                # Choose good initial guess
+                if count > conf.observer.mhe.n_horizon+1:
+                    arg["x0"] = conf.observer.optimal_solution
+
                 result = conf.observer.mhe.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
                 conf.observer.optimal_solution = result['x']
                 conf.observer.mhe.x_hat = NP.squeeze(conf.observer.optimal_solution[X_offset[-1][0]:X_offset[-1][0]+nx])
+                # pdb.set_trace()
                 if conf.observer.param_est:
                     conf.observer.mhe.p_hat = NP.squeeze(conf.observer.optimal_solution[:np])
                 if conf.observer.open_loop:
@@ -241,21 +256,37 @@ def make_step_observer(conf):
                 p_est = conf.observer.mhe.p_hat
                 u_mpc = conf.optimizer.u_mpc
                 tv_p_real = conf.simulator.tv_p_real_now(conf.simulator.t0_sim)
-                for sim in range(rep_sim):
-                    conf.observer.mhe.x_hat  = NP.squeeze((conf.simulator.simulator(x0 =conf.observer.mhe.x_hat, p = vertcat(u_mpc,p_est,tv_p_real)))['xf'])
+                if count == 0:
+                    conf.observer.mhe.x_hat = conf.simulator.x0_sim
+                else:
+                    conf.observer.mhe.x_hat = conf.simulator.xf_sim
+                # for sim in range(rep_sim):
+                #     if conf.optimizer.state_discretization == 'discrete-time':
+                #         rhs_unscaled = substitute(conf.model.rhs, conf.model.x, conf.model.x * conf.model.ocp.x_scaling)/conf.model.ocp.x_scaling
+                #         rhs_unscaled = substitute(rhs_unscaled, conf.model.u, conf.model.u * conf.model.ocp.u_scaling)
+                #         rhs_fcn = Function('rhs_fcn',[conf.model.x,vertcat(conf.model.u,conf.model.p,conf.model.tv_p)],[rhs_unscaled])
+                #         x_next = rhs_fcn(conf.observer.mhe.x_hat,vertcat(u_mpc,p_est,tv_p_real))
+                #         conf.observer.mhe.x_hat = NP.squeeze(NP.array(x_next))
+                #     else:
+                #         conf.observer.mhe.x_hat  = NP.squeeze((conf.simulator.simulator(x0 =conf.observer.mhe.x_hat, p = vertcat(u_mpc,p_est,tv_p_real)))['xf'])
                 if conf.observer.open_loop:
                     conf.observer.observed_states = conf.simulator.xf_sim
                 else:
                     conf.observer.observed_states = conf.observer.mhe.x_hat
             conf.store_est_data()
+            print("-------------------------")
+            print("Error in estimated states:", conf.simulator.xf_sim - conf.observer.mhe.x_hat)
+            print("count", count)
 
 
 def make_measurement(conf):
     # preprocess data
     x = conf.simulator.x0_sim
     u = conf.optimizer.u_mpc
-    p = conf.simulator.p_real_batch
+    p = conf.simulator.p_real_now(conf.simulator.t0_sim)
     tv_p = conf.simulator.tv_p_real_now(conf.simulator.t0_sim)
-    conf.observer.measurement = conf.observer.meas_fcn(x,u,p,tv_p)
+    # conf.observer.measurement = conf.observer.meas_fcn(x,u,p,tv_p)
     # add noise
-    conf.observer.measurement += NP.random.normal(0,conf.observer.mag)
+    # conf.observer.measurement += NP.random.normal(0,conf.observer.mag)
+    # In this case the measurement is 0 all the time
+    conf.observer.measurement = NP.array([0.0,0.0])

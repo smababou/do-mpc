@@ -154,7 +154,7 @@ def plot_mpc(configuration):
     plt.ion()
     fig = plt.figure(1)
     total_subplots = len(plot_states) + len(plot_control)
-    if configuration.observer.param_est:
+    if not configuration.observer.method == "state-feedback" and configuration.observer.param_est:
         total_subplots += np
     # First plot the states
     for index in range(len(plot_states)):
@@ -181,7 +181,7 @@ def plot_mpc(configuration):
         plt.grid()
         plot.yaxis.set_major_locator(MaxNLocator(4))
 
-    if configuration.observer.param_est:
+    if not configuration.observer.method == "state-feedback" and configuration.observer.param_est:
         for index in range(np):
             plot = plt.subplot(total_subplots, 1, len(plot_states)+len(plot_control) + index + 1)
             plt.plot(mpc_time, mpc_param_real[:,index])

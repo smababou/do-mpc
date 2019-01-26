@@ -96,7 +96,7 @@ class simulator:
     """A class for the definition model equations and optimal control problem formulation"""
     def __init__(self, model_simulator, param_dict, *opt):
         # Assert for define length of param_dict
-        required_dimension = 10
+        required_dimension = 11
         if not (len(param_dict) == required_dimension): raise Exception("Simulator information is incomplete. The number of elements in the dictionary is not correct")
         # Build the simulator for EKF
         rhs_unscaled = substitute(model_simulator.rhs, model_simulator.x, model_simulator.x * model_simulator.ocp.x_scaling)/model_simulator.ocp.x_scaling
@@ -112,6 +112,7 @@ class simulator:
         self.export_name = param_dict["export_name"]
         self.p_real_now = param_dict["p_real_now"]
         self.tv_p_real_now = param_dict["tv_p_real_now"]
+        self.tv_u_real_now = param_dict["tv_u_real_now"]
         self.t_step_simulator = param_dict["t_step_simulator"]
         self.t0_sim = 0
         self.tf_sim = param_dict["t_step_simulator"]
@@ -280,14 +281,14 @@ class configuration:
         # Extract the necessary information for the simulation
         u_mpc = self.optimizer.u_mpc
         # Use the real parameters
-        # p_real = self.simulator.p_real_now(self.simulator.t0_sim)
-        p_real = self.simulator.p_real_batch
+        p_real = self.simulator.p_real_now(self.simulator.t0_sim)
+        # p_real = self.simulator.p_real_batch
         tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
         if self.optimizer.state_discretization == 'discrete-time':
             rhs_unscaled = substitute(self.model.rhs, self.model.x, self.model.x * self.model.ocp.x_scaling)/self.model.ocp.x_scaling
             rhs_unscaled = substitute(rhs_unscaled, self.model.u, self.model.u * self.model.ocp.u_scaling)
-            rhs_fcn = Function('rhs_fcn',[self.model.x,vertcat(self.model.u,self.model.p)],[rhs_unscaled])
-            x_next = rhs_fcn(self.simulator.x0_sim,vertcat(u_mpc,p_real))
+            rhs_fcn = Function('rhs_fcn',[self.model.x,vertcat(self.model.u,self.model.p,self.model.tv_p)],[rhs_unscaled])
+            x_next = rhs_fcn(self.simulator.x0_sim,vertcat(u_mpc,p_real,tv_p_real))
             self.simulator.xf_sim = NP.squeeze(NP.array(x_next))
         else:
             result  = self.simulator.simulator(x0 = self.simulator.x0_sim, p = vertcat(u_mpc,p_real,tv_p_real))
@@ -341,8 +342,8 @@ class configuration:
         #data.mpc_ref = NP.append(data.mpc_ref, [[0]], axis = 0) # TODO: To be completed
         stats = self.optimizer.solver.stats()
         data.mpc_cpu = NP.append(data.mpc_cpu, [[stats['t_wall_solver']]], axis = 0)
-        # data.mpc_parameters = NP.append(data.mpc_parameters, [self.simulator.p_real_now(self.simulator.t0_sim)], axis = 0)
-        data.mpc_parameters = NP.append(data.mpc_parameters, NP.reshape(self.simulator.p_real_batch,(1,-1)), axis = 0)
+        data.mpc_parameters = NP.append(data.mpc_parameters, [self.simulator.p_real_now(self.simulator.t0_sim)], axis = 0)
+        # data.mpc_parameters = NP.append(data.mpc_parameters, NP.reshape(self.simulator.p_real,(1,-1)), axis = 0)
         if self.observer.method == "EKF":
             data.mpc_parameters_est = NP.append(data.mpc_parameters_est, NP.reshape(self.observer.ekf.x_hat[nx:],(1,-1)), axis = 0)
             # data.mpc_parameters_est = NP.append(data.mpc_parameters_est, NP.reshape(NP.hstack([self.observer.ekf.x_hat[nx:],0.0]),(1,-1)), axis = 0)
