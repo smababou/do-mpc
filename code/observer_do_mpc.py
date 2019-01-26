@@ -232,8 +232,8 @@ def make_step_observer(conf):
                 arg['p'] = param
                 # optimization
                 # "Hard" fix of the initial point of the mhe window
-                arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = data.est_states[count-nk+1,:]
-                arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = data.est_states[count-nk+1,:]
+                # arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = data.est_states[count-nk+1,:]
+                # arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = data.est_states[count-nk+1,:]
                 # "Hard" fix of the initial point of the mhe window to the real state (unrealistic)
                 # arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]
                 # arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]

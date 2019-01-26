@@ -95,6 +95,7 @@ def export_to_matlab(configuration):
         "mpc_cost": data.mpc_cost,
         "mpc_ref": data.mpc_ref,
         "mpc_parameters": data.mpc_parameters,
+        "est_states": data.est_states * x_scaling,
         }
         scipy.io.savemat(export_name, mdict=export_dict)
         print("Exporting to Matlab as ''" + export_name + "''")

@@ -105,8 +105,8 @@ def model():
 
     # Center positions for the Constraints
     c1 = mtimes(quaternionRotate(dquat1, NP.array([0.0,0.0,1.0])).T, quaternionRotate(dquat2, NP.array([0.0,0.0,1.0]))) -1
-    center1 = pos1 + quaternionRotate(dquat1, o1)
-    center2 = pos2 + quaternionRotate(dquat2, o2)
+    center1 = dpos1 + quaternionRotate(dquat1, o1)
+    center2 = dpos2 + quaternionRotate(dquat2, o2)
     c2 = norm_2(center1 - center2)
     # Concatenate differential states, algebraic states, control inputs and right-hand-sides
 

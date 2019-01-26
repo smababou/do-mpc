@@ -593,7 +593,7 @@ def setup_mhe(model, observer, param_dict):
                     J += J_ksb
                 Y_ks = meas_fcn(xf_ksb, U_ks, P_ksb, TV_P[:, k])
                 if k >= 0:
-                    [J_ksb] = lagrange_fcn.call([X_ks, Y_MEAS[:,k], U_ks, U_MEAS[:,k], P_ksb, TV_P[:, k]])
+                    [J_ksb] = lagrange_fcn.call([xf_ksb, Y_MEAS[:,k], U_ks, U_MEAS[:,k], P_ksb, TV_P[:, k]])
                     J += J_ksb #omega[k] * J_ksb
 
                 # Add contribution to the cost of the soft constraints penalty
