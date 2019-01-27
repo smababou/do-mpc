@@ -145,9 +145,11 @@ def model():
 
     # Bounds on the states. Use "inf" for unconstrained states
 
-    x_lb = -20 * NP.ones(_x.shape[0])
-    x_ub =  20 * NP.ones(_x.shape[0])
+    x_lb = -1.08 * NP.ones(_x.shape[0])
+    x_ub =  1.08 * NP.ones(_x.shape[0])
 
+    x_lb = -10 * NP.ones(_x.shape[0])
+    x_ub =  10 * NP.ones(_x.shape[0])
     # No algebraic states
     z_lb = NP.array([])
     z_ub = NP.array([])

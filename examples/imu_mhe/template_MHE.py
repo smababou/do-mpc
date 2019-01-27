@@ -94,13 +94,13 @@ def observer(model):
     nu = model.u.size(1)
     ny = model.y.size(1)
 
-    P_states = 0.1 * NP.diag(NP.ones(nx))
+    P_states = 10 * NP.diag(NP.ones(nx))
 
     P_param = 0 * NP.diag(NP.ones([np]))
 
-    P_inputs = 10 * NP.diag(NP.ones([nu]))
+    P_inputs = 5 * NP.diag(NP.ones([nu]))
 
-    P_meas = 1000 * NP.diag(NP.ones(ny))
+    P_meas = 100 * NP.diag(NP.ones(ny))
 
     """
     --------------------------------------------------------------------------
