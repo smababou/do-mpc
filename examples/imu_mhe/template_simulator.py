@@ -62,22 +62,23 @@ def simulator(model):
     N = acc1_.shape[0]
     # if noise and variables
     # pdb.set_trace()
-    acc1_dist = 0.1*(2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 0.1*NP.random.randn(N,3)
-    acc2_dist = 0.1*(2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 0.1*NP.random.randn(N,3)
+    acc1_dist = 0.1 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 0.1*NP.random.randn(N,3)
+    acc2_dist = 0.1 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 0.1*NP.random.randn(N,3)
     gyr1_dist = 2*NP.pi/360.0 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 2*NP.pi/360.0 * NP.random.randn(N,3)
     gyr2_dist = 2*NP.pi/360.0 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 2*NP.pi/360.0 * NP.random.randn(N,3)
     # add the noise and bias
-    acc1_ = acc1_ + acc1_dist
-    gyr1_ = gyr1_ + gyr1_dist
-    acc2_ = acc2_ + acc2_dist
-    gyr2_ = gyr2_ + gyr2_dist
+    acc1_noisy = acc1_ + acc1_dist
+    gyr1_noisy = gyr1_ + gyr1_dist
+    acc2_noisy = acc2_ + acc2_dist
+    gyr2_noisy = gyr2_ + gyr2_dist
     def tv_p_real_now(current_time):
         tv_p_real = NP.array([0.0, 0.0])
         return tv_p_real
     def tv_u_real_now(current_time):
         ii = int(round(current_time/0.01))
         tv_u_real = NP.squeeze(vertcat(acc1_[ii], gyr1_[ii], acc2_[ii],gyr2_[ii]))
-        return tv_u_real
+        tv_u_real_noisy = NP.squeeze(vertcat(acc1_noisy[ii], gyr1_noisy[ii], acc2_noisy[ii],gyr2_noisy[ii]))
+        return tv_u_real, tv_u_real_noisy
     """
     --------------------------------------------------------------------------
     template_simulator: plotting options

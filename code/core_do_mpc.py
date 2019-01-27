@@ -365,7 +365,7 @@ class configuration:
             self.observer.mhe.count += 1
         if self.observer.param_est:
             data.est_param = NP.append(data.est_param,p,axis=0)
-        data.u_meas = NP.append(data.u_meas,NP.reshape(self.optimizer.u_mpc,(1,-1)),axis=0)
+        data.u_meas = NP.append(data.u_meas,NP.reshape(self.optimizer.u_mpc_meas,(1,-1)),axis=0)
         data.est_states = NP.append(data.est_states,NP.reshape(x[:nx],(1,-1)),axis=0)
         data.y_meas = NP.append(data.y_meas,NP.reshape(self.observer.measurement,(1,-1)),axis=0)
         data.est_time = NP.append(data.est_time,NP.reshape(self.observer.t_cur,(1,1)),axis=0)

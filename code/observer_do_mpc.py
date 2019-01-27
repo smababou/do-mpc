@@ -228,7 +228,7 @@ def make_step_observer(conf):
                 # param["X_EST"] = NP.reshape(data.mpc_states[count-nk,:],(-1,1))
                 # pdb.set_trace()
                 # param["U_MEAS"] = data.u_meas[count-nk:count,:].T
-                param["U_MEAS"] = horzcat(data.u_meas[count-nk+1:count+1,:].T, conf.optimizer.u_mpc)
+                param["U_MEAS"] = horzcat(data.u_meas[count-nk+1:count+1,:].T, conf.optimizer.u_mpc_meas)
                 arg['p'] = param
                 # optimization
                 # "Hard" fix of the initial point of the mhe window
@@ -254,7 +254,7 @@ def make_step_observer(conf):
             else:
                 # open loop estimation (simulation) for initialization
                 p_est = conf.observer.mhe.p_hat
-                u_mpc = conf.optimizer.u_mpc
+                u_mpc = conf.optimizer.u_mpc_meas
                 tv_p_real = conf.simulator.tv_p_real_now(conf.simulator.t0_sim)
                 if count == 0:
                     conf.observer.mhe.x_hat = conf.simulator.x0_sim
@@ -275,7 +275,7 @@ def make_step_observer(conf):
                     conf.observer.observed_states = conf.observer.mhe.x_hat
             conf.store_est_data()
             print("-------------------------")
-            print("Error in estimated states:", conf.simulator.xf_sim - conf.observer.mhe.x_hat)
+            # print("Error in estimated states:", conf.simulator.xf_sim - conf.observer.mhe.x_hat)
             print("count", count)
 
 
