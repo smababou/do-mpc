@@ -47,7 +47,7 @@ def observer(model):
     """
 
     # Prediction horizon
-    n_horizon = 20
+    n_horizon = 40
     # Robust horizon, set to 0 for standard NMPC
     n_robust = 0
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
@@ -96,8 +96,12 @@ def observer(model):
     nu = model.u.size(1)
     ny = model.y.size(1)
 
-    P_states = n_horizon * 0.001 * NP.diag(NP.ones(nx))
-
+    # Different penalty for each type of state
+    P_quat = 0.01 * NP.diag(NP.ones(4))
+    P_pos  = 0*NP.diag(NP.ones(3))
+    P_vel  = 0*NP.diag(NP.ones(3))
+    # P_states = n_horizon * 0.001 * NP.diag(NP.ones(nx))
+    P_states = block_diag(P_quat, P_quat, P_vel, P_vel, P_pos, P_pos)
     P_param = 0 * NP.diag(NP.ones([np]))
     # Different penalties for each input
     P_gyr = 1.0/(2*NP.pi/360.0) * NP.diag(NP.ones([nu/4]))

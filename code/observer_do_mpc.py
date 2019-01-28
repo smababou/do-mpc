@@ -2,6 +2,7 @@ import numpy as NP
 from casadi import *
 from casadi.tools import *
 import setup_mhe
+import data_do_mpc
 from scipy.linalg import expm
 import pdb
 
@@ -226,10 +227,12 @@ def make_step_observer(conf):
                 param["Y_MEAS"] = data.y_meas[count-nk:count,:].T
                 # last estimate at the beginning of the estimation window
                 last_estimate = NP.reshape(data.est_states[count-nk+1,:],(-1,1))
-                if conf.observer.mhe.count == conf.observer.mhe.n_horizon:
-                    # now add some noise to simulate that the initial condition is Unknown
-                    # last_estimate = last_estimate + 0.1*NP.random.randn(nx,1)
-                    last_estimate = last_estimate
+                # if conf.observer.mhe.count == conf.observer.mhe.n_horizon:
+                #     # now add some noise to simulate that the initial condition is Unknown
+                #     last_estimate[0:4] = NP.array[[1.0,0,0,0]]
+                #     last_estimate[4:8] = NP.array[[0,1.0,0,0]]
+                #     last_estimate[8:] = last_estimate[8:] + 0.1*NP.random.randn(nx-8,1)
+                    # last_estimate = last_estimate
                 param["X_EST"] = last_estimate
                 # param["X_EST"] = NP.reshape(data.mpc_states[count-nk,:],(-1,1))
                 # pdb.set_trace()
@@ -249,6 +252,8 @@ def make_step_observer(conf):
 
                 result = conf.observer.mhe.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
                 conf.observer.optimal_solution = result['x']
+                optimal_cost = data_do_mpc.opt_result(result)
+                conf.observer.optimal_cost = optimal_cost.optimal_cost
                 conf.observer.mhe.x_hat = NP.squeeze(conf.observer.optimal_solution[X_offset[-1][0]:X_offset[-1][0]+nx])
                 # pdb.set_trace()
                 if conf.observer.param_est:
@@ -279,6 +284,7 @@ def make_step_observer(conf):
                     conf.observer.observed_states = conf.simulator.xf_sim
                 else:
                     conf.observer.observed_states = conf.observer.mhe.x_hat
+                conf.observer.optimal_cost = NP.array([[0.0]])
             conf.store_est_data()
             print("-------------------------")
             # print("Error in estimated states:", conf.simulator.xf_sim - conf.observer.mhe.x_hat)

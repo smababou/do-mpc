@@ -363,6 +363,7 @@ class configuration:
             if self.observer.param_est:
                 p = NP.reshape(self.observer.mhe.p_hat,(1,-1))
             self.observer.mhe.count += 1
+            data.est_cost = NP.append(data.est_cost, self.observer.optimal_cost, axis = 0)
         if self.observer.param_est:
             data.est_param = NP.append(data.est_param,p,axis=0)
         data.u_meas = NP.append(data.u_meas,NP.reshape(self.optimizer.u_mpc_meas,(1,-1)),axis=0)

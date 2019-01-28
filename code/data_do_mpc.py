@@ -67,6 +67,7 @@ class mpc_data:
                 self.est_states = NP.reshape(configuration.observer.ekf.x_hat[:nx],(1,-1))
             elif configuration.observer.method == "MHE":
                 self.est_states = NP.reshape(configuration.observer.mhe.x_hat[:nx],(1,-1))
+                self.est_cost = NP.resize(NP.array([]),(1, 1))
             self.u_meas = NP.resize(NP.array([]),(0, nu))
             self.y_meas = NP.resize(NP.array([]),(0, ny))
             if configuration.observer.param_est:
@@ -96,6 +97,7 @@ def export_to_matlab(configuration):
         "mpc_ref": data.mpc_ref,
         "mpc_parameters": data.mpc_parameters,
         "est_states": data.est_states * x_scaling,
+        "mhe_cost": data.est_cost,
         }
         scipy.io.savemat(export_name, mdict=export_dict)
         print("Exporting to Matlab as ''" + export_name + "''")
