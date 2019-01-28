@@ -141,12 +141,12 @@ def model():
     pos2_0 = pos2_ref[0,:]
 
     # Wrong initial conditions
-    quat1_0 = NP.array([1.0,0,0,0])
-    quat2_0 = NP.array([1.0,0,0,0])
+    quat1_0 = NP.array([1.0,0.0,0.0,0.0])
+    quat2_0 = NP.array([0.0,1.0,0.0,0.0])
     vel1_0 = (quaternionRotate(quat1_0, acc1_[0,:]) -[0,0,9.81])/rate
     vel2_0 = (quaternionRotate(quat2_0, acc2_[0,:]) -[0,0,9.81])/rate
-    pos1_0 = pos1_ref[0,:]
-    pos2_0 = pos2_ref[0,:]
+    pos1_0 = (1 + 0.1*NP.random.randn(3))*pos1_ref[0,:]
+    pos2_0 = (1 + 0.1*NP.random.randn(3))*pos2_ref[0,:]
     x0 = NP.squeeze(vertcat(quat1_0, quat2_0, vel1_0,vel2_0, pos1_0, pos2_0))
     # No algebraic states
     z0 = NP.array([])
@@ -174,9 +174,11 @@ def model():
     y_scaling = 1.0*NP.squeeze(NP.ones(_y.shape))
     # Other possibly nonlinear constraints in the form cons(x,u,p) <= cons_ub
     # Define the expresion of the constraint (leave it empty if not necessary)
+    # cons = vertcat([norm_2(quat1), -norm_2(quat1), norm_2(quat2), -norm_2(quat2)])
     cons = vertcat([])
-    # Define the lower and upper bounds of the constraint (leave it empty if not necessary)
     cons_ub = NP.array([])
+    # Define the lower and upper bounds of the constraint (leave it empty if not necessary)
+    # cons_ub = NP.array([1,-1,1,-1])
 
     # Activate if the nonlinear constraints should be implemented as soft constraints
     soft_constraint = 0

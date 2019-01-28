@@ -226,14 +226,9 @@ def make_step_observer(conf):
                 param = arg['p']
                 param["Y_MEAS"] = data.y_meas[count-nk:count,:].T
                 # last estimate at the beginning of the estimation window
-                last_estimate = NP.reshape(data.est_states[count-nk+1,:],(-1,1))
-                # if conf.observer.mhe.count == conf.observer.mhe.n_horizon:
-                #     # now add some noise to simulate that the initial condition is Unknown
-                #     last_estimate[0:4] = NP.array[[1.0,0,0,0]]
-                #     last_estimate[4:8] = NP.array[[0,1.0,0,0]]
-                #     last_estimate[8:] = last_estimate[8:] + 0.1*NP.random.randn(nx-8,1)
-                    # last_estimate = last_estimate
-                param["X_EST"] = last_estimate
+                if conf.observer.mhe.count == conf.observer.mhe.n_horizon:
+                    conf.observer.mhe.last_estimate = NP.reshape(data.est_states[count-nk+1,:],(-1,1))
+                param["X_EST"] = conf.observer.mhe.last_estimate
                 # param["X_EST"] = NP.reshape(data.mpc_states[count-nk,:],(-1,1))
                 # pdb.set_trace()
                 # param["U_MEAS"] = data.u_meas[count-nk:count,:].T
@@ -246,15 +241,17 @@ def make_step_observer(conf):
                 # "Hard" fix of the initial point of the mhe window to the real state (unrealistic)
                 # arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]
                 # arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]
+
                 # Choose good initial guess
                 if count > conf.observer.mhe.n_horizon+1:
                     arg["x0"] = conf.observer.optimal_solution
-
                 result = conf.observer.mhe.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
                 conf.observer.optimal_solution = result['x']
                 optimal_cost = data_do_mpc.opt_result(result)
                 conf.observer.optimal_cost = optimal_cost.optimal_cost
                 conf.observer.mhe.x_hat = NP.squeeze(conf.observer.optimal_solution[X_offset[-1][0]:X_offset[-1][0]+nx])
+                # Store the estimated state at the last to last point of the window to be used in the next iteration
+                conf.observer.mhe.last_estimate = NP.squeeze(conf.observer.optimal_solution[X_offset[1][0]:X_offset[1][0]+nx])
                 # pdb.set_trace()
                 if conf.observer.param_est:
                     conf.observer.mhe.p_hat = NP.squeeze(conf.observer.optimal_solution[:np])
