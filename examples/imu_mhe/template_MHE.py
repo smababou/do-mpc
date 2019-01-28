@@ -96,16 +96,18 @@ def observer(model):
     nu = model.u.size(1)
     ny = model.y.size(1)
 
-    P_states = n_horizon * 0.01 * NP.diag(NP.ones(nx))
+    P_states = n_horizon * 0.001 * NP.diag(NP.ones(nx))
 
     P_param = 0 * NP.diag(NP.ones([np]))
     # Different penalties for each input
-    P_gyr = 2*NP.pi/360.0 * NP.diag(NP.ones([nu/4]))
-    P_acc = 0.1 * NP.diag(NP.ones([nu/4]))
+    P_gyr = 1.0/(2*NP.pi/360.0) * NP.diag(NP.ones([nu/4]))
+    P_acc = 1.0/(0.1) * NP.diag(NP.ones([nu/4]))
 
-    P_inputs = block_diag(P_acc, P_gyr, P_acc, P_gyr)
+    P_inputs = 1 * block_diag(P_acc, P_gyr, P_acc, P_gyr)
 
-    P_meas = 10 * NP.diag(NP.ones(ny))
+    # P_meas = 10 * NP.diag(NP.ones(ny))
+    # Choose if you want to discard the first constraint
+    P_meas = 10 * NP.diag(NP.array([1,1]))
 
     """
     --------------------------------------------------------------------------

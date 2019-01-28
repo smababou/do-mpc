@@ -224,7 +224,13 @@ def make_step_observer(conf):
                 # update parameters of optimizer
                 param = arg['p']
                 param["Y_MEAS"] = data.y_meas[count-nk:count,:].T
-                param["X_EST"] = NP.reshape(data.est_states[count-nk+1,:],(-1,1))
+                # last estimate at the beginning of the estimation window
+                last_estimate = NP.reshape(data.est_states[count-nk+1,:],(-1,1))
+                if conf.observer.mhe.count == conf.observer.mhe.n_horizon:
+                    # now add some noise to simulate that the initial condition is Unknown
+                    # last_estimate = last_estimate + 0.1*NP.random.randn(nx,1)
+                    last_estimate = last_estimate
+                param["X_EST"] = last_estimate
                 # param["X_EST"] = NP.reshape(data.mpc_states[count-nk,:],(-1,1))
                 # pdb.set_trace()
                 # param["U_MEAS"] = data.u_meas[count-nk:count,:].T

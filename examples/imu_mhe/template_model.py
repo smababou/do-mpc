@@ -148,8 +148,8 @@ def model():
     x_lb = -1.08 * NP.ones(_x.shape[0])
     x_ub =  1.08 * NP.ones(_x.shape[0])
 
-    x_lb = -20 * NP.ones(_x.shape[0])
-    x_ub =  20 * NP.ones(_x.shape[0])
+    x_lb = -500 * NP.ones(_x.shape[0])
+    x_ub =  500 * NP.ones(_x.shape[0])
     # No algebraic states
     z_lb = NP.array([])
     z_ub = NP.array([])
