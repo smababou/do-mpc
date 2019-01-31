@@ -1,4 +1,7 @@
-#
+#   TODO:
+#   - Estimate the bias
+#   - Penalize in the arrival term the relative position (something that is actually observable)
+#   - Use differential equations and not discretized equations
 #   This file is part of do-mpc
 #
 #   do-mpc: An environment for the easy, modular and efficient implementation of
@@ -98,8 +101,8 @@ def observer(model):
 
     # Different penalty for each type of state
     P_quat = 0.010 * NP.diag(NP.ones(4))
-    P_pos  = 0 * NP.diag(NP.ones(3))
-    P_vel  = 0 * NP.diag(NP.ones(3))
+    P_pos  = 0.001 * NP.diag(NP.ones(3))
+    P_vel  = 0.001 * NP.diag(NP.ones(3))
     # P_states = n_horizon * 0.001 * NP.diag(NP.ones(nx))
     P_states = block_diag(P_quat, P_quat, P_vel, P_vel, P_pos, P_pos)
     P_param = 0 * NP.diag(NP.ones([np]))
@@ -111,7 +114,7 @@ def observer(model):
 
     # P_meas = 10 * NP.diag(NP.ones(ny))
     # Choose if you want to discard the first constraint
-    P_meas = 10 * NP.diag(NP.array([1.0,1]))
+    P_meas = 100 * NP.diag(NP.array([1.0,1.0]))
 
     """
     --------------------------------------------------------------------------

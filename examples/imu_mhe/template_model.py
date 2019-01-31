@@ -104,7 +104,7 @@ def model():
     dpos2 = pos2 + (dvel2)/rate
 
     # Center positions for the Constraints
-    c1 = mtimes(quaternionRotate(dquat1, NP.array([0.0,0.0,1.0])).T, quaternionRotate(dquat2, NP.array([0.0,0.0,1.0]))) -1
+    c1 = mtimes(quaternionRotate(dquat1, NP.array([0.0,0.0,1.0])).T, quaternionRotate(dquat2, NP.array([0.0,0.0,1.0]))) - 1
     center1 = dpos1 + quaternionRotate(dquat1, o1)
     center2 = dpos2 + quaternionRotate(dquat2, o2)
     c2 = norm_2(center1 - center2)
@@ -141,8 +141,10 @@ def model():
     pos2_0 = pos2_ref[0,:]
 
     # Wrong initial conditions
+    quat1_0 = NP.array([0.0,0.0,1.0,0.0])
+    quat2_0 = NP.array([0.0,1/NP.sqrt(2),1/NP.sqrt(2),0.0])
     quat1_0 = NP.array([1.0,0.0,0.0,0.0])
-    quat2_0 = NP.array([0.0,1.0,0.0,0.0])
+    quat2_0 = NP.array([1.0,0.0,0.0,0.0])
     vel1_0 = (quaternionRotate(quat1_0, acc1_[0,:]) -[0,0,9.81])/rate
     vel2_0 = (quaternionRotate(quat2_0, acc2_[0,:]) -[0,0,9.81])/rate
     pos1_0 = (1 + 0.1*NP.random.randn(3))*pos1_ref[0,:]
@@ -158,6 +160,11 @@ def model():
 
     x_lb = -500 * NP.ones(_x.shape[0])
     x_ub =  500 * NP.ones(_x.shape[0])
+
+    # x_lb[8:11] = NP.ones(3)
+    # x_lb[11:14] = NP.ones(3)
+    # x_lb[14:17] = NP.ones(3)
+    # x_lb[17:20] = NP.ones(3)
     # No algebraic states
     z_lb = NP.array([])
     z_ub = NP.array([])
