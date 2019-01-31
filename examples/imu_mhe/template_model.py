@@ -62,6 +62,11 @@ def model():
 
     alpha   = SX.sym("alpha")
     beta    = SX.sym("beta")
+    # Biases for the sensors
+    acc1_bias = SX.sym("acc1_bias", 3)
+    acc1_bias = SX.sym("acc1_bias", 3)
+    acc1_bias = SX.sym("acc1_bias", 3)
+    acc1_bias = SX.sym("gyr2_bias", 3)
     # Define the differential states as CasADi symbols
     quat1    = SX.sym("quat1",4) # Concentration A
     quat2    = SX.sym("quat2",4) # Concentration B
@@ -108,9 +113,28 @@ def model():
     center1 = dpos1 + quaternionRotate(dquat1, o1)
     center2 = dpos2 + quaternionRotate(dquat2, o2)
     c2 = norm_2(center1 - center2)
+
+    # Make it differential equations
+    #
+    # dquat1 =  rate * (-quat1 +  quaternionMultiply(quat1, quaternionFromGyr(gyr1, rate)))
+    # dquat2 =  rate * (-quat2 +  quaternionMultiply(quat2, quaternionFromGyr(gyr2, rate)))
+    #
+    # dvel1 = (quaternionRotate(quat1, acc1) - NP.array([0.0, 0.0, 9.81]))
+    # dvel2 = (quaternionRotate(quat2, acc2) - NP.array([0.0, 0.0, 9.81]))
+    #
+    # dpos1 = vel1
+    # dpos2 = vel2
+    #
+    # # Center positions for the Constraints
+    # c1 = mtimes(quaternionRotate(quat1, NP.array([0.0,0.0,1.0])).T, quaternionRotate(quat2, NP.array([0.0,0.0,1.0]))) - 1
+    # center1 = pos1 + quaternionRotate(quat1, o1)
+    # center2 = pos2 + quaternionRotate(quat2, o2)
+    # c2 = norm_2(center1 - center2)
+
+
     # Concatenate differential states, algebraic states, control inputs and right-hand-sides
 
-    _x = vertcat(quat1, quat2, vel1,vel2, pos1, pos2)
+    _x = vertcat(quat1, quat2, vel1, vel2, pos1, pos2)
 
     _y = vertcat(c1, c2)
 
