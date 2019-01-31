@@ -230,7 +230,8 @@ def make_step_observer(conf):
                     conf.observer.mhe.last_estimate = NP.reshape(data.est_states[count-nk+1,:],(-1,1))
                 param["X_EST"] = conf.observer.mhe.last_estimate
                 # param["X_EST"] = NP.reshape(data.mpc_states[count-nk,:],(-1,1))
-                # pdb.set_trace()
+                if conf.observer.param_est:
+                    param["P_EST"] = conf.observer.mhe.p_hat
                 # param["U_MEAS"] = data.u_meas[count-nk:count,:].T
                 param["U_MEAS"] = horzcat(data.u_meas[count-nk+1:count+1,:].T, conf.optimizer.u_mpc_meas)
                 arg['p'] = param

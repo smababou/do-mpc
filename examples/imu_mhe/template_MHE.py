@@ -41,7 +41,7 @@ def observer(model):
     method = 'MHE'
     open_loop = False
     t_step = 0.01 # Sampling time
-    parameter_estimation = False
+    parameter_estimation = True
 
     """
     --------------------------------------------------------------------------
@@ -86,7 +86,7 @@ def observer(model):
     # Define the different possible values of the uncertain parameters in the scenario tree
     delH_R_values = NP.array([950.0, 950.0 * 1.30, 950.0 * 0.70])
     k_0_values = NP.array([7.0*1.00, 7.0*1.30, 7.0*0.70])
-    uncertainty_values = NP.array([delH_R_values, k_0_values])
+    uncertainty_values = NP.zeros((12,2))
 
     """
     --------------------------------------------------------------------------
@@ -105,7 +105,7 @@ def observer(model):
     P_vel  = 0.001 * NP.diag(NP.ones(3))
     # P_states = n_horizon * 0.001 * NP.diag(NP.ones(nx))
     P_states = block_diag(P_quat, P_quat, P_vel, P_vel, P_pos, P_pos)
-    P_param = 0 * NP.diag(NP.ones([np]))
+    P_param = 0.1 * NP.diag(NP.ones([np]))
     # Different penalties for each input
     P_gyr = 1.0/(2*NP.pi/360.0) * NP.diag(NP.ones([nu/4]))
     P_acc = 1.0/(0.1) * NP.diag(NP.ones([nu/4]))
@@ -124,10 +124,15 @@ def observer(model):
 
 
     x_init = model.ocp.x0
-    p_init = NP.array([0.0,0.0])
+    p_init = NP.zeros(np)
 
-    p_lb = NP.array([950.0, 7.0]) * 0.7
-    p_ub = NP.array([950.0, 7.0]) * 1.3
+    bias_gyr_ub = 2*NP.pi/360.0 * NP.ones(3)
+    bias_gyr_lb = -2*NP.pi/360.0  * NP.ones(3)
+    bias_acc_ub = 0.1 * NP.ones(3)
+    bias_acc_lb = -0.1 * NP.ones(3)
+
+    p_lb = NP.squeeze(vertcat(bias_acc_lb, bias_gyr_lb, bias_acc_lb, bias_gyr_lb))
+    p_ub = NP.squeeze(vertcat(bias_acc_ub, bias_gyr_ub, bias_acc_ub, bias_gyr_ub))
 
     """
     --------------------------------------------------------------------------

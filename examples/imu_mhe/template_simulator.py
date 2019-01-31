@@ -44,10 +44,7 @@ def simulator(model):
     # Choose the real value of the uncertain parameters that will be used
     # to perform the simulation of the system. They can be constant or time-varying
     def p_real_now(current_time):
-        if current_time >= 0:
-            p_real =  NP.array([1.0,1.0])
-        else:
-            p_real =  NP.array([1.0,1.0])
+        p_real =  NP.zeros(12)
         return p_real
 
     # Choose the real value of the time-varing parameters

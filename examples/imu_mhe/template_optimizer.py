@@ -71,9 +71,9 @@ def optimizer(model):
     --------------------------------------------------------------------------
     """
     # Define the different possible values of the uncertain parameters in the scenario tree
-    delH_R_values = NP.array([950.0, 950.0 * 1.30, 950.0 * 0.70])
-    k_0_values = NP.array([7.0*1.00, 7.0*1.30, 7.0*0.70])
-    uncertainty_values = NP.array([delH_R_values, k_0_values])
+    delH_R_values = NP.array([950.0])
+    k_0_values = NP.array([7.0*1.00])
+    uncertainty_values = NP.zeros((12,2))
     """
     --------------------------------------------------------------------------
     template_optimizer: time-varying parameters

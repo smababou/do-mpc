@@ -64,9 +64,9 @@ def model():
     beta    = SX.sym("beta")
     # Biases for the sensors
     acc1_bias = SX.sym("acc1_bias", 3)
-    acc1_bias = SX.sym("acc1_bias", 3)
-    acc1_bias = SX.sym("acc1_bias", 3)
-    acc1_bias = SX.sym("gyr2_bias", 3)
+    gyr1_bias = SX.sym("gyr1_bias", 3)
+    acc2_bias = SX.sym("acc2_bias", 3)
+    gyr2_bias = SX.sym("gyr2_bias", 3)
     # Define the differential states as CasADi symbols
     quat1    = SX.sym("quat1",4) # Concentration A
     quat2    = SX.sym("quat2",4) # Concentration B
@@ -80,7 +80,10 @@ def model():
     acc2 = SX.sym("acc2",3)
     gyr2 = SX.sym("gyr2",3)
     # Define the algebraic states as CasADi symbols
-
+    acc1_real = acc1 + acc1_bias
+    gyr1_real = gyr1 + gyr1_bias
+    acc2_real = acc2 + acc2_bias
+    gyr2_real = gyr2 + gyr2_bias
     # Define the control inputs as CasADi symbols
 
     u      = SX.sym("u") # Vdot/V_R [h^-1]
@@ -99,11 +102,11 @@ def model():
 
     # Define the differential equations
 
-    dquat1 = quaternionMultiply(quat1, quaternionFromGyr(gyr1, rate))
-    dquat2 = quaternionMultiply(quat2, quaternionFromGyr(gyr2, rate))
+    dquat1 = quaternionMultiply(quat1, quaternionFromGyr(gyr1_real, rate))
+    dquat2 = quaternionMultiply(quat2, quaternionFromGyr(gyr2_real, rate))
 
-    dvel1 = vel1 + (quaternionRotate(dquat1, acc1) - NP.array([0.0, 0.0, 9.81]))/rate
-    dvel2 = vel2 + (quaternionRotate(dquat2, acc2) - NP.array([0.0, 0.0, 9.81]))/rate
+    dvel1 = vel1 + (quaternionRotate(dquat1, acc1_real) - NP.array([0.0, 0.0, 9.81]))/rate
+    dvel2 = vel2 + (quaternionRotate(dquat2, acc2_real) - NP.array([0.0, 0.0, 9.81]))/rate
 
     dpos1 = pos1 + (dvel1)/rate
     dpos2 = pos2 + (dvel2)/rate
@@ -144,7 +147,7 @@ def model():
 
     _xdot = vertcat(dquat1, dquat2, dvel1, dvel2, dpos1, dpos2)
 
-    _p = vertcat(alpha, beta)
+    _p = vertcat(acc1_bias, gyr1_bias, acc2_bias, gyr2_bias)
 
     _tv_p = vertcat(tv_param_1, tv_param_2)
 

@@ -88,6 +88,10 @@ def export_to_matlab(configuration):
         export_name = configuration.simulator.export_name
         x_scaling = configuration.model.ocp.x_scaling
         u_scaling = configuration.model.ocp.u_scaling
+        if configuration.observer.param_est:
+            est_param = data.est_param
+        else:
+            est_param = 0
         export_dict = {
         "mpc_states":data.mpc_states * x_scaling,
         "mpc_control":data.mpc_control * u_scaling,
@@ -98,6 +102,7 @@ def export_to_matlab(configuration):
         "mpc_parameters": data.mpc_parameters,
         "est_states": data.est_states * x_scaling,
         "mhe_cost": data.est_cost,
+        "est_param": data.est_param,
         }
         scipy.io.savemat(export_name, mdict=export_dict)
         print("Exporting to Matlab as ''" + export_name + "''")
