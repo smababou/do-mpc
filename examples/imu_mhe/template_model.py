@@ -143,8 +143,8 @@ def model():
     # Wrong initial conditions
     quat1_0 = NP.array([0.0,0.0,1.0,0.0])
     quat2_0 = NP.array([0.0,1/NP.sqrt(2),1/NP.sqrt(2),0.0])
-    quat1_0 = NP.array([1.0,0.0,0.0,0.0])
-    quat2_0 = NP.array([1.0,0.0,0.0,0.0])
+    # quat1_0 = NP.array([1.0,0.0,0.0,0.0])
+    # quat2_0 = NP.array([1.0,0.0,0.0,0.0])
     vel1_0 = (quaternionRotate(quat1_0, acc1_[0,:]) -[0,0,9.81])/rate
     vel2_0 = (quaternionRotate(quat2_0, acc2_[0,:]) -[0,0,9.81])/rate
     pos1_0 = (1 + 0.1*NP.random.randn(3))*pos1_ref[0,:]
@@ -161,10 +161,15 @@ def model():
     x_lb = -500 * NP.ones(_x.shape[0])
     x_ub =  500 * NP.ones(_x.shape[0])
 
-    # x_lb[8:11] = NP.ones(3)
-    # x_lb[11:14] = NP.ones(3)
-    # x_lb[14:17] = NP.ones(3)
-    # x_lb[17:20] = NP.ones(3)
+    x_lb[8:11]  = -2 * NP.ones(3)
+    x_lb[11:14] = -2 * NP.ones(3)
+    x_lb[14:17] = -10* NP.ones(3)
+    x_lb[17:20] = -10*NP.ones(3)
+
+    x_ub[8:11]  = 2 * NP.ones(3)
+    x_ub[11:14] = 2 * NP.ones(3)
+    x_ub[14:17] = 10* NP.ones(3)
+    x_ub[17:20] = 10*NP.ones(3)
     # No algebraic states
     z_lb = NP.array([])
     z_ub = NP.array([])
