@@ -98,23 +98,23 @@ def observer(model):
     np = model.p.size(1)
     nu = model.u.size(1)
     ny = model.y.size(1)
-
+    tv_param_1 = model.tv_p[0]
     # Different penalty for each type of state
-    P_quat = 0.010 * NP.diag(NP.ones(4))
+    P_quat = 0.1 * NP.diag(NP.ones(4))
     P_pos  = 0.001 * NP.diag(NP.ones(3))
     P_vel  = 0.001 * NP.diag(NP.ones(3))
     # P_states = n_horizon * 0.001 * NP.diag(NP.ones(nx))
-    P_states = block_diag(P_quat, P_quat, P_vel, P_vel, P_pos, P_pos)
-    P_param = 0.1 * NP.diag(NP.ones([np]))
+    P_states = 1*tv_param_1*block_diag(P_quat, P_quat, P_vel, P_vel, P_pos, P_pos)
+    P_param = 0*100 * NP.diag(NP.ones([np]))
     # Different penalties for each input
     P_gyr = 1.0/(2*NP.pi/360.0) * NP.diag(NP.ones([nu/4]))
     P_acc = 1.0/(0.1) * NP.diag(NP.ones([nu/4]))
 
-    P_inputs = 1 * block_diag(P_acc, P_gyr, P_acc, P_gyr)
+    P_inputs = 10 * block_diag(P_acc, P_gyr, P_acc, P_gyr)
 
     # P_meas = 10 * NP.diag(NP.ones(ny))
     # Choose if you want to discard the first constraint
-    P_meas = 100 * NP.diag(NP.array([1.0,1.0]))
+    P_meas = 100 * NP.diag(NP.array([1.0,10.0]))
 
     """
     --------------------------------------------------------------------------
@@ -126,10 +126,10 @@ def observer(model):
     x_init = model.ocp.x0
     p_init = NP.zeros(np)
 
-    bias_gyr_ub = 2*NP.pi/360.0 * NP.ones(3)
-    bias_gyr_lb = -2*NP.pi/360.0  * NP.ones(3)
-    bias_acc_ub = 0.1 * NP.ones(3)
-    bias_acc_lb = -0.1 * NP.ones(3)
+    bias_gyr_ub = 0*3* 2*NP.pi/360.0 * NP.ones(3)
+    bias_gyr_lb = 0*3* -2*NP.pi/360.0  * NP.ones(3)
+    bias_acc_ub = 0*3* 0.1 * NP.ones(3)
+    bias_acc_lb = 0*3* -0.1 * NP.ones(3)
 
     p_lb = NP.squeeze(vertcat(bias_acc_lb, bias_gyr_lb, bias_acc_lb, bias_gyr_lb))
     p_ub = NP.squeeze(vertcat(bias_acc_ub, bias_gyr_ub, bias_acc_ub, bias_gyr_ub))

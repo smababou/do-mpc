@@ -48,7 +48,7 @@ def simulator(model):
         return p_real
 
     # Choose the real value of the time-varing parameters
-    data = sio.loadmat("simulation_data_without_disturbance.mat", squeeze_me=True, struct_as_record=False)
+    data = sio.loadmat("simulation_data_without_disturbance_1s_rest.mat", squeeze_me=True, struct_as_record=False)
     # True measurements
     rate = float(data["meta"].rate)
     # pdb.set_trace()
@@ -59,15 +59,15 @@ def simulator(model):
     N = acc1_.shape[0]
     # if noise and variables
     # pdb.set_trace()
-    acc1_dist = 0.1 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 0.1*NP.random.randn(N,3)
-    acc2_dist = 0.1 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 0.1*NP.random.randn(N,3)
-    gyr1_dist = 2*NP.pi/360.0 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 2*NP.pi/360.0 * NP.random.randn(N,3)
-    gyr2_dist = 2*NP.pi/360.0 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 2*NP.pi/360.0 * NP.random.randn(N,3)
+    acc1_dist = 1 * 0.1 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 0.1*NP.random.randn(N,3)
+    acc2_dist = 1 * 0.1 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 0.1*NP.random.randn(N,3)
+    gyr1_dist = 1 * 2*NP.pi/360.0 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 2*NP.pi/360.0 * NP.random.randn(N,3)
+    gyr2_dist = 1 * 2*NP.pi/360.0 * (2*NP.tile(NP.random.rand(1,3),(N,1))-1) + 2*NP.pi/360.0 * NP.random.randn(N,3)
     # add the noise and bias
-    acc1_noisy = acc1_ + acc1_dist
-    gyr1_noisy = gyr1_ + gyr1_dist
-    acc2_noisy = acc2_ + acc2_dist
-    gyr2_noisy = gyr2_ + gyr2_dist
+    acc1_noisy = acc1_ + acc1_dist *0
+    gyr1_noisy = gyr1_ + gyr1_dist *0
+    acc2_noisy = acc2_ + acc2_dist *0
+    gyr2_noisy = gyr2_ + gyr2_dist *0
     def tv_p_real_now(current_time):
         tv_p_real = NP.array([0.0, 0.0])
         return tv_p_real

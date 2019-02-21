@@ -34,7 +34,7 @@ def optimizer(model):
     """
 
     # Prediction horizon
-    n_horizon = 15
+    n_horizon = 10
     # Robust horizon, set to 0 for standard NMPC
     n_robust = 0
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
@@ -42,7 +42,7 @@ def optimizer(model):
     # Sampling time
     t_step = 0.01
     # Simulation time
-    t_end = 10.0
+    t_end = 2.0
     # Choose type of state discretization (collocation, multiple-shooting or discrete-time)
     # NOTE: this information should be included in the model
     state_discretization = 'discrete-time'
@@ -87,11 +87,8 @@ def optimizer(model):
     n_tv_p = 2
     tv_p_values = NP.resize(NP.array([]),(number_steps,n_tv_p,n_horizon))
     for time_step in range (number_steps):
-        if time_step < number_steps/2:
-            tv_param_1_values = 0.6*NP.ones(n_horizon)
-        else:
-            tv_param_1_values = 0.8*NP.ones(n_horizon)
-        tv_param_2_values = 0.9*NP.ones(n_horizon)
+        tv_param_1_values = 1*NP.ones(n_horizon)
+        tv_param_2_values = 1*NP.ones(n_horizon)
         tv_p_values[time_step] = NP.array([tv_param_1_values,tv_param_2_values])
     # Parameteres of the NLP which may vary along the time (For example a set point that varies at a given time)
     set_point = SX.sym('set_point')

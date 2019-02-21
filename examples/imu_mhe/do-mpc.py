@@ -121,7 +121,7 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     """
     # Plot animation if chosen in by the user
     data_do_mpc.plot_animation(configuration_1)
-
+    data_do_mpc.export_to_matlab(configuration_1)
 """
 ------------------------------------------------------
 do-mpc: Plot the closed-loop results

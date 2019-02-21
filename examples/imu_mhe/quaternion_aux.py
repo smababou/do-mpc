@@ -5,9 +5,19 @@ from casadi import *
 import pdb
 def quaternionFromGyr(gyr, rate):
     gyrNorm = norm_2(gyr)
+    # pdb.set_trace()
+    # quat_curr_prev = if_else(gyrNorm < 1000, vertcat(NP.array([1.0,0,0,0])), vertcat(cos(gyrNorm/rate/2.0), gyr/gyrNorm*sin(gyrNorm/rate/2.0)) )
+    # Smooth the if condition to take care of the case where the gyroscope measure is [0,0,0]
+    # quat_curr_prev = -(1+(tanh(100*(gyrNorm - 1e-6))/2.0)
+    # axis_ = -(1+(tanh(100*(gyrNorm - 1e-6))/2.0)
+    # quat_curr_prev = vertcat(NP.array([1.0,0,0,0]))
+    # if gyrNorm < 1e-10:
+    #     quat_curr_prev = [1.0,0,0,0]
+    # else:
     axis = gyr/gyrNorm
     angle = gyrNorm/rate
     quat_curr_prev = vertcat(cos(angle/2.0), axis*sin(angle/2.0))
+    # quat_curr_prev = vertcat(NP.array([1.0,0,0,0]))
     return vertcat(quat_curr_prev)
 
 def quaternionInvert (q_):

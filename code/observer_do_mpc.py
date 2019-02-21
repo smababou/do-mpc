@@ -235,6 +235,10 @@ def make_step_observer(conf):
                 # param["U_MEAS"] = data.u_meas[count-nk:count,:].T
                 param["U_MEAS"] = horzcat(data.u_meas[count-nk+1:count+1,:].T, conf.optimizer.u_mpc_meas)
                 arg['p'] = param
+                # change the tv_param to include the arrival cost after the first window
+                # if conf.observer.mhe.count > conf.observer.mhe.n_horizon:
+                    # param["TV_P"] = NP.array([NP.ones(conf.observer.mhe.n_horizon),NP.ones(conf.observer.mhe.n_horizon)])
+
                 # optimization
                 # "Hard" fix of the initial point of the mhe window
                 # arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = data.est_states[count-nk+1,:]
@@ -243,6 +247,28 @@ def make_step_observer(conf):
                 # arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]
                 # arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]
 
+                # Add initial velocity constraints
+                if conf.simulator.t0_sim <= 1:
+                    for i_c in range(conf.observer.mhe.n_horizon):
+                        arg['lbx'][X_offset[i_c,0]+8:X_offset[i_c,0]+14] = NP.zeros(6)
+                        arg['ubx'][X_offset[i_c,0]+8:X_offset[i_c,0]+14] = NP.zeros(6)
+                elif conf.simulator.t0_sim <= 1 + conf.observer.mhe.n_horizon/100.0:
+                    for i_c in range(conf.observer.mhe.n_horizon):
+                        # pdb.set_trace()
+                        # if i_c < int(round(conf.simulator.t0_sim * 100 - 100) + conf.observer.mhe.n_horizon):
+                        if round(conf.simulator.t0_sim * 100) - conf.observer.mhe.n_horizon + i_c < 100:
+                            arg['lbx'][X_offset[i_c,0]+8:X_offset[i_c,0]+14] = NP.zeros(6)
+                            arg['ubx'][X_offset[i_c,0]+8:X_offset[i_c,0]+14] = NP.zeros(6)
+                        else:
+                            arg['lbx'][X_offset[i_c,0]:X_offset[i_c,0]+nx] = conf.model.ocp.x_lb
+                            arg['ubx'][X_offset[i_c,0]:X_offset[i_c,0]+nx] = conf.model.ocp.x_ub
+                else:
+                    for i_c in range(conf.observer.mhe.n_horizon):
+                        arg['lbx'][X_offset[i_c,0]:X_offset[i_c,0]+nx] = conf.model.ocp.x_lb
+                        arg['ubx'][X_offset[i_c,0]:X_offset[i_c,0]+nx] = conf.model.ocp.x_ub
+                        arg['lbx'][0:np] = conf.observer.mhe.p_hat
+                        arg['ubx'][0:np] = conf.observer.mhe.p_hat
+                    # and now stop estimating the bias
                 # Choose good initial guess
                 if count > conf.observer.mhe.n_horizon+1:
                     arg["x0"] = conf.observer.optimal_solution
