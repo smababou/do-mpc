@@ -42,7 +42,7 @@ def optimizer(model):
     # Sampling time
     t_step = 0.01
     # Simulation time
-    t_end = 2.0
+    t_end = 10.0
     # Choose type of state discretization (collocation, multiple-shooting or discrete-time)
     # NOTE: this information should be included in the model
     state_discretization = 'discrete-time'
