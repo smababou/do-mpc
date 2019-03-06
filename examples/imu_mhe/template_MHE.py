@@ -50,7 +50,7 @@ def observer(model):
     """
 
     # Prediction horizon
-    n_horizon = 200
+    n_horizon = 400
     # Robust horizon, set to 0 for standard NMPC
     n_robust = 0
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
