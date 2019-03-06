@@ -248,6 +248,9 @@ def make_step_observer(conf):
                 # arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = data.mpc_states[count-nk+1,:]
 
                 # Add initial velocity constraints
+                # NOTE: HARD CODING
+                # This if/elif/else is here to hard code the fact that the first 1 second contains measurements with velocity = 0
+                # This something important in this example due to unobservability
                 if conf.simulator.t0_sim <= 1:
                     for i_c in range(conf.observer.mhe.n_horizon):
                         arg['lbx'][X_offset[i_c,0]+8:X_offset[i_c,0]+14] = NP.zeros(6)
@@ -263,6 +266,7 @@ def make_step_observer(conf):
                             arg['lbx'][X_offset[i_c,0]:X_offset[i_c,0]+nx] = conf.model.ocp.x_lb
                             arg['ubx'][X_offset[i_c,0]:X_offset[i_c,0]+nx] = conf.model.ocp.x_ub
                 else:
+                    # When 1 second is gone then just put the original constraints back, AND fix the estimated biases, which are assumed to remain constant
                     for i_c in range(conf.observer.mhe.n_horizon):
                         arg['lbx'][X_offset[i_c,0]:X_offset[i_c,0]+nx] = conf.model.ocp.x_lb
                         arg['ubx'][X_offset[i_c,0]:X_offset[i_c,0]+nx] = conf.model.ocp.x_ub

@@ -50,7 +50,7 @@ def observer(model):
     """
 
     # Prediction horizon
-    n_horizon = 400
+    n_horizon = 40
     # Robust horizon, set to 0 for standard NMPC
     n_robust = 0
     # open_loop robust NMPC (1) or multi-stage NMPC (0). Only important if n_robust > 0
@@ -139,7 +139,7 @@ def observer(model):
     template_observer: measurement function
     --------------------------------------------------------------------------
     """
-
+    # Noise is added on the inputs in this case, as they are the actual measurements
     noise = 'uniform'
     mag = NP.ones(ny)*0.000 #width
 

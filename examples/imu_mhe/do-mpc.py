@@ -83,7 +83,7 @@ while (configuration_1.simulator.t0_sim + configuration_1.simulator.t_step_simul
     if configuration_1.simulator.t0_sim == 0:
         configuration_1.make_step_optimizer()
     # The input in this case are the perfect masurements acc1, gyr1, acc2, gyr2
-    configuration_1.optimizer.u_mpc = configuration_1.simulator.tv_u_real_now(configuration_1.simulator.t0_sim)[0]
+    configuration_1.optimizer.u_mpc = configuration_1.simulator.tv_u_real_now(configuration_1.simulator.t0_sim)[1]
     # For the estimation we use measurements with noise
     configuration_1.optimizer.u_mpc_meas = configuration_1.simulator.tv_u_real_now(configuration_1.simulator.t0_sim)[1]
     """
