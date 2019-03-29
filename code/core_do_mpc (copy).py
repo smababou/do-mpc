@@ -176,14 +176,12 @@ class observer:
 class configuration:
     """ A class for the definition of a do-mpc configuration that
     contains a model, optimizer, observer and simulator module """
-    def __init__(self, model, optimizer, observer, simulator, states, inputs):
+    def __init__(self, model, optimizer, observer, simulator):
         # The four modules
         self.model = model
         self.optimizer = optimizer
         self.observer = observer
         self.simulator = simulator
-	self.states = states		# Robot#s States
-	self.inputs = inputs		# Robot#s Inputs
         # The data structure
         self.mpc_data = data_do_mpc.mpc_data(self)
 
@@ -238,12 +236,10 @@ class configuration:
         self.make_measurement()
         self.observer.observed_states = self.simulator.measurement # NOTE: this is a dummy observer
 
-    def make_step_simulator(self, states):
+    def make_step_simulator(self):
         # Extract the necessary information for the simulation
-	self.states = states
         u_mpc = self.optimizer.u_mpc
 	print('############__Inputs__############: ', u_mpc)
-	self.inputs.input(u_mpc[0], u_mpc[1])
         # Use the real parameters
         p_real = self.simulator.p_real_now(self.simulator.t0_sim)
         tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
@@ -257,8 +253,7 @@ class configuration:
             result  = self.simulator.simulator(x0 = self.simulator.x0_sim, p = vertcat(u_mpc,p_real,tv_p_real))
             self.simulator.xf_sim = NP.squeeze(result['xf'])
         # Update the initial condition for the next iteration
-	self.simulator.x0_sim = NP.array([self.states['x'], self.states['y'], self.states['theta']])
-        #self.simulator.x0_sim = self.simulator.xf_sim
+        self.simulator.x0_sim = self.simulator.xf_sim
         # Correction for sizes of arrays when dimension is 1
         if self.simulator.xf_sim.shape ==  ():
             self.simulator.xf_sim = NP.array([self.simulator.xf_sim])
