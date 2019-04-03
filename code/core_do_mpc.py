@@ -27,6 +27,9 @@ from casadi.tools import *
 import data_do_mpc
 import numpy as NP
 import pdb
+from threading import Thread
+
+
 class ocp:
     """ A class that contains a full description of the optimal control problem and will be used in the model class. This is dependent on a specific element of a model class"""
     def __init__(self, param_dict, *opt):
@@ -225,7 +228,8 @@ class configuration:
 
     def make_step_optimizer(self):
         arg = self.optimizer.arg
-        result = self.optimizer.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p'])
+        #print('#####################Intial guess' ,arg['x0'], '\n', self.optimizer.nlp_dict_out['X_offset'])
+        result = self.optimizer.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p']) ## change intial guess
         # Store the full solution
         self.optimizer.opt_result_step = data_do_mpc.opt_result(result)
         # Extract the optimal control input to be applied
@@ -242,7 +246,10 @@ class configuration:
         # Extract the necessary information for the simulation
         u_mpc = self.optimizer.u_mpc
         print('############__Inputs__############: ', u_mpc)
-        self.inputs(u_mpc[0], u_mpc[1])
+        object_1 = Thread(target=self.inputs, args=(u_mpc[0],u_mpc[1]))
+        object_1.start()
+        object_1.join()
+        #self.inputs(u_mpc[0], u_mpc[1])
         # Use the real parameters
         p_real = self.simulator.p_real_now(self.simulator.t0_sim)
         tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
@@ -288,7 +295,8 @@ class configuration:
 
         self.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = observed_states
         self.optimizer.arg['ubx'][X_offset[0,0]:X_offset[0,0]+nx] = observed_states
-        self.optimizer.arg["x0"] = self.optimizer.opt_result_step.optimal_solution
+        self.optimizer.arg["x0"] = self.optimizer.opt_result_step.optimal_solution  ## change
+        #print(self.optimizer.opt_result_step.optimal_solution[X_offset+2])
         # Pass as parameter the used control input
         self.optimizer.arg['p'] = param
 
