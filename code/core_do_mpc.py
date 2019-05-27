@@ -200,6 +200,11 @@ class configuration:
         #NOTE: this could be passed as parameters of the optimizer class
         opts["ipopt.max_iter"] = 500
         opts["ipopt.tol"] = 1e-6
+        # Trun On/Off Intial Printings
+        #opts["verbose_init"] = False
+        #opts["verbose"] = False
+        #opts["print_time"] = False
+        #opts["ipopt.print_level"] = 0
         # Setup the solver
         solver = nlpsol("solver", self.optimizer.nlp_solver, nlp_dict_out['nlp_fcn'], opts)
         arg = {}
