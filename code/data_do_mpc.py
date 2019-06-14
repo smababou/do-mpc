@@ -81,7 +81,7 @@ def export_to_matlab(configuration):
         "mpc_parameters": data.mpc_parameters,
         }
         scipy.io.savemat(export_name, mdict=export_dict)
-        print("Solver Time", data.mpc_cpu)
+        #print("Solver Time", data.mpc_cpu)
         print("Exporting to Matlab as ''" + export_name + "''")
 
 def plot_mpc(configuration):

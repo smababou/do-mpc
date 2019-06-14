@@ -28,6 +28,7 @@ import data_do_mpc
 import numpy as NP
 import pdb
 from threading import Thread
+from datetime import datetime, timedelta
 
 
 class ocp:
@@ -179,7 +180,7 @@ class observer:
 class configuration:
     """ A class for the definition of a do-mpc configuration that
     contains a model, optimizer, observer and simulator module """
-    def __init__(self, model, optimizer, observer, simulator, states, inputs):
+    def __init__(self, model, optimizer, observer, simulator, states, inputs, horizon_1):
         # The four modules
         self.model = model
         self.optimizer = optimizer
@@ -187,6 +188,7 @@ class configuration:
         self.simulator = simulator
         self.states = states		# Robot#s States
         self.inputs = inputs		# Robot#s Inputs
+        self.horizon_1 = horizon_1
         # The data structure
         self.mpc_data = data_do_mpc.mpc_data(self)
 
@@ -235,6 +237,7 @@ class configuration:
         arg = self.optimizer.arg
         #print('#####################Intial guess' ,arg['x0'], '\n', self.optimizer.nlp_dict_out['X_offset'])
         result = self.optimizer.solver(x0=arg['x0'], lbx=arg['lbx'], ubx=arg['ubx'], lbg=arg['lbg'], ubg=arg['ubg'], p = arg['p']) ## change intial guess
+        time_now = datetime.now()
         # Store the full solution
         self.optimizer.opt_result_step = data_do_mpc.opt_result(result)
         # Extract the optimal control input to be applied
@@ -242,6 +245,47 @@ class configuration:
         U_offset = self.optimizer.nlp_dict_out['U_offset']
         v_opt = self.optimizer.opt_result_step.optimal_solution
         self.optimizer.u_mpc = NP.resize(NP.array(v_opt[U_offset[0][0]:U_offset[0][0]+nu]),(nu))
+        # Publish N_horizon Topic
+        nk = self.optimizer.n_horizon
+        t0 = 0.0
+        tf = self.optimizer.t_step * nk
+        tgrid = NP.linspace(t0,t0+tf,nk+1)
+        date_list = NP.array([time_now + timedelta(seconds=x) for x in tgrid])
+        self.horizon_1.horizon_msg.time_horizon.hr = NP.array([x.time().hour for x in date_list])
+        self.horizon_1.horizon_msg.time_horizon.min = NP.array([x.time().minute for x in date_list])
+        self.horizon_1.horizon_msg.time_horizon.sec = NP.array([x.time().second for x in date_list])
+        self.horizon_1.horizon_msg.time_horizon.msec = NP.array([x.time().microsecond for x in date_list])
+        self.horizon_1.horizon_msg.n_horizon = nk
+        X_offset = self.optimizer.nlp_dict_out['X_offset']
+        nx = self.model.x.size(1)
+        pp_horz = NP.array([0,0,0])
+        for v in range(X_offset.size):
+           pp_horz = NP.vstack([pp_horz, NP.resize(NP.array(v_opt[X_offset[v][0]:X_offset[v][0]+nx]),(nx))])
+        pp_horz = pp_horz[1:]
+        self.horizon_1.horizon_msg.x = pp_horz[:,0]
+        self.horizon_1.horizon_msg.y = pp_horz[:,1]
+        self.horizon_1.horizon_msg.theta = pp_horz[:,1]
+        self.horizon_1.horizon_pub()
+        #self.optimizer.nlp_dict_out['p'][-5] = obst_eqn_robot
+
+    def horizon_checker(self):
+        # obst_eqn_robot = ((self.states('States').ret.x-3.5)**2 + (self.states('States').ret.y-3.5)**2 - (1)**2) / 1
+        # p_real[2:7] = obst_eqn_robot
+        # obst_eqn_robot_1 = ((self.model.x[0]-3.5)**2 + (self.model.x[1]-3.5)**2 - (1)**2) / 1
+        # self.model.p[2:7] = obst_eqn_robot_1
+        a = NP.array([self.horizon_1.horizon_msg.x, self.horizon_1.horizon_msg.y]).T
+        b = a-1
+        b[-1] = b[-1] + 0.7
+        dist = NP.array([np.linalg.norm(a[x]-b[x]) for x in range(a.shape[0])])
+
+        for idx, val in np.ndenumerate(dist):
+            if val<0.5:
+                print val
+                print idx[0]
+                print self.horizon_1.horizon_msg.time_horizon.min[idx[0]]
+                print self.horizon_1.horizon_msg.time_horizon.sec[idx[0]]
+                print self.horizon_1.horizon_msg.time_horizon.msec[idx[0]]
+        xsfafsasf
 
     def make_step_observer(self):
         self.make_measurement()
@@ -250,14 +294,15 @@ class configuration:
     def make_step_simulator(self):
         # Extract the necessary information for the simulation
         u_mpc = self.optimizer.u_mpc
-        print('############__Inputs__############: ', u_mpc)
+        #print('############__Inputs__############: ', u_mpc)
         object_1 = Thread(target=self.inputs, args=(u_mpc[0],u_mpc[1]))
         object_1.start()
         object_1.join()
         #self.inputs(u_mpc[0], u_mpc[1])
         # Use the real parameters
         p_real = self.simulator.p_real_now(self.simulator.t0_sim)
-        tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
+        # tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
+        tv_p_real = NP.array([0.0]*self.model.tv_p.size(1))
         if self.optimizer.state_discretization == 'discrete-time':
             rhs_unscaled = substitute(self.model.rhs, self.model.x, self.model.x * self.model.ocp.x_scaling)/self.model.ocp.x_scaling
             rhs_unscaled = substitute(rhs_unscaled, self.model.u, self.model.u * self.model.ocp.u_scaling)
@@ -269,6 +314,7 @@ class configuration:
             self.simulator.xf_sim = NP.squeeze(result['xf'])
         # Update the initial condition for the next iteration
         self.simulator.x0_sim = NP.array([self.states('States').ret.x, self.states('States').ret.y, self.states('States').ret.theta])
+        print(self.simulator.x0_sim)
         #self.simulator.x0_sim = self.simulator.xf_sim
         # Correction for sizes of arrays when dimension is 1
         if self.simulator.xf_sim.shape ==  ():
@@ -295,7 +341,8 @@ class configuration:
         # First value of the nlp parameters
         param["uk_prev"] = self.optimizer.u_mpc
         step_index = int(self.simulator.t0_sim / self.simulator.t_step_simulator)
-        param["TV_P"] = self.optimizer.tv_p_values[step_index]
+        #param["TV_P"] = self.optimizer.tv_p_values[step_index]
+        param["TV_P"] = NP.resize(NP.array([4.0]),(ntv_p,nk))
         # Enforce the observed states as initial point for next optimization
 
         self.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = observed_states
