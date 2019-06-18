@@ -180,7 +180,7 @@ class observer:
 class configuration:
     """ A class for the definition of a do-mpc configuration that
     contains a model, optimizer, observer and simulator module """
-    def __init__(self, model, optimizer, observer, simulator, states, inputs, horizon_1):
+    def __init__(self, model, optimizer, observer, simulator, states, inputs, horizon_1, moving_obst_1):
         # The four modules
         self.model = model
         self.optimizer = optimizer
@@ -189,6 +189,7 @@ class configuration:
         self.states = states		# Robot#s States
         self.inputs = inputs		# Robot#s Inputs
         self.horizon_1 = horizon_1
+        self.moving_obst_1 = moving_obst_1  # Random Moving Obstacle
         # The data structure
         self.mpc_data = data_do_mpc.mpc_data(self)
 
@@ -205,8 +206,8 @@ class configuration:
         # Turn On/Off Initial Printings
         #opts["verbose_init"] = False
         #opts["verbose"] = False
-        #opts["print_time"] = False
-        #opts["ipopt.print_level"] = 0
+        # opts["print_time"] = False
+        # opts["ipopt.print_level"] = 0
         # Setup the solver
         solver = nlpsol("solver", self.optimizer.nlp_solver, nlp_dict_out['nlp_fcn'], opts)
         arg = {}
@@ -301,8 +302,8 @@ class configuration:
         #self.inputs(u_mpc[0], u_mpc[1])
         # Use the real parameters
         p_real = self.simulator.p_real_now(self.simulator.t0_sim)
-        # tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
-        tv_p_real = NP.array([0.0]*self.model.tv_p.size(1))
+        tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
+        # tv_p_real = NP.array([0.0]*self.model.tv_p.size(1))
         if self.optimizer.state_discretization == 'discrete-time':
             rhs_unscaled = substitute(self.model.rhs, self.model.x, self.model.x * self.model.ocp.x_scaling)/self.model.ocp.x_scaling
             rhs_unscaled = substitute(rhs_unscaled, self.model.u, self.model.u * self.model.ocp.u_scaling)
@@ -341,8 +342,8 @@ class configuration:
         # First value of the nlp parameters
         param["uk_prev"] = self.optimizer.u_mpc
         step_index = int(self.simulator.t0_sim / self.simulator.t_step_simulator)
-        #param["TV_P"] = self.optimizer.tv_p_values[step_index]
-        param["TV_P"] = NP.resize(NP.array([4.0]),(ntv_p,nk))
+        param["TV_P"] = self.optimizer.tv_p_values[0]
+        # param["TV_P"] = NP.resize(NP.array([4.0]),(ntv_p,nk))
         # Enforce the observed states as initial point for next optimization
 
         self.optimizer.arg['lbx'][X_offset[0,0]:X_offset[0,0]+nx] = observed_states
