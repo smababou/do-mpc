@@ -79,6 +79,7 @@ def export_to_matlab(configuration):
         "mpc_cost": data.mpc_cost,
         "mpc_ref": data.mpc_ref,
         "mpc_parameters": data.mpc_parameters,
+        "mpc_solver_time": data.mpc_cpu,
         }
         scipy.io.savemat(export_name, mdict=export_dict)
         #print("Solver Time", data.mpc_cpu)
@@ -100,7 +101,7 @@ def plot_mpc(configuration):
 
     plt.ion()
     fig = plt.figure(1)
-    total_subplots = len(plot_states) + len(plot_control)
+    total_subplots = len(plot_states) + len(plot_control) + 1
     # First plot the states
     for index in range(len(plot_states)):
     	plot = plt.subplot(total_subplots, 1, index + 1)
@@ -118,6 +119,15 @@ def plot_mpc(configuration):
     	plt.xlabel("Time")
     	plt.grid()
     	plot.yaxis.set_major_locator(MaxNLocator(4))
+
+    plot = plt.subplot(total_subplots, 1, 6)
+    plt.plot(mpc_time, mpc_data.mpc_cpu ,drawstyle='steps')
+    plt.ylabel("Solver Time")
+    plt.xlabel("Time")
+    plt.grid()
+    plot.yaxis.set_major_locator(MaxNLocator(4))
+    plot.xaxis.set_major_locator(MaxNLocator(12))
+    
 
 
 
