@@ -206,8 +206,8 @@ class configuration:
         # Turn On/Off Initial Printings
         #opts["verbose_init"] = False
         #opts["verbose"] = False
-        # opts["print_time"] = False
-        # opts["ipopt.print_level"] = 0
+        opts["print_time"] = False
+        opts["ipopt.print_level"] = 0
         # Setup the solver
         solver = nlpsol("solver", self.optimizer.nlp_solver, nlp_dict_out['nlp_fcn'], opts)
         arg = {}
@@ -303,6 +303,10 @@ class configuration:
         # Use the real parameters
         p_real = self.simulator.p_real_now(self.simulator.t0_sim)
         tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
+        if np.linalg.norm(NP.array([self.states('States').ret.x, self.states('States').ret.y]) - NP.array([8, 8])) < 0.5:
+            tv_p_real[4] = 4
+        else: 
+            tv_p_real[4] = 0
         # tv_p_real = NP.array([0.0]*self.model.tv_p.size(1))
         if self.optimizer.state_discretization == 'discrete-time':
             rhs_unscaled = substitute(self.model.rhs, self.model.x, self.model.x * self.model.ocp.x_scaling)/self.model.ocp.x_scaling
@@ -315,7 +319,7 @@ class configuration:
             self.simulator.xf_sim = NP.squeeze(result['xf'])
         # Update the initial condition for the next iteration
         self.simulator.x0_sim = NP.array([self.states('States').ret.x, self.states('States').ret.y, self.states('States').ret.theta])
-        print(self.simulator.x0_sim)
+        # print(self.simulator.x0_sim)
         #self.simulator.x0_sim = self.simulator.xf_sim
         # Correction for sizes of arrays when dimension is 1
         if self.simulator.xf_sim.shape ==  ():
@@ -342,6 +346,10 @@ class configuration:
         # First value of the nlp parameters
         param["uk_prev"] = self.optimizer.u_mpc
         step_index = int(self.simulator.t0_sim / self.simulator.t_step_simulator)
+        if np.linalg.norm(NP.array([self.states('States').ret.x, self.states('States').ret.y]) - NP.array([8, 8])) < 0.5:
+            self.optimizer.tv_p_values[0,4,:] = NP.resize(NP.array([4.0]),(1,nk))
+        else: 
+            self.optimizer.tv_p_values[0,4,:] = NP.resize(NP.array([0.0]),(1,nk))
         param["TV_P"] = self.optimizer.tv_p_values[0]
         # param["TV_P"] = NP.resize(NP.array([4.0]),(ntv_p,nk))
         # Enforce the observed states as initial point for next optimization
