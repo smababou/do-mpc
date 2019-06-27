@@ -188,8 +188,9 @@ class configuration:
         self.simulator = simulator
         self.states = states		# Robot#s States
         self.inputs = inputs		# Robot#s Inputs
-        self.horizon_1 = horizon_1
+        self.horizon_1 = horizon_1  # Pridiction Horizon Publisher
         self.moving_obst_1 = moving_obst_1  # Random Moving Obstacle
+        self.set_m_obst_weight = False
         # The data structure
         self.mpc_data = data_do_mpc.mpc_data(self)
 
@@ -303,15 +304,27 @@ class configuration:
         # Use the real parameters
         p_real = self.simulator.p_real_now(self.simulator.t0_sim)
         tv_p_real = self.simulator.tv_p_real_now(self.simulator.t0_sim)
+        step_index = int(self.simulator.t0_sim / self.simulator.t_step_simulator)
+        if step_index > 0:
+            tv_p_real[0:2] = self.moving_obst_1.tv_p_values[0,:,0]
+        else:
+            pass
+
         if np.linalg.norm(NP.array([self.states('States').ret.x, self.states('States').ret.y]) - NP.array([8, 8])) < 0.5:
             tv_p_real[4] = 4
         else: 
             tv_p_real[4] = 0
-        
-        if np.linalg.norm(NP.array([self.states('States').ret.x, self.states('States').ret.y]) - NP.array([tv_p_real[0], tv_p_real[1]])) < 1:
+
+        if np.linalg.norm(NP.array([self.states('States').ret.x, self.states('States').ret.y]) - NP.array([tv_p_real[0], tv_p_real[1]])) < 2:
             tv_p_real[5] = 40
+            tv_p_real[2] = 2
+            tv_p_real[3] = 2
+            self.set_m_obst_weight = True
         else: 
             tv_p_real[5] = 0
+            tv_p_real[2] = 10
+            tv_p_real[3] = 10
+            self.set_m_obst_weight = False
         # tv_p_real = NP.array([0.0]*self.model.tv_p.size(1))
         if self.optimizer.state_discretization == 'discrete-time':
             rhs_unscaled = substitute(self.model.rhs, self.model.x, self.model.x * self.model.ocp.x_scaling)/self.model.ocp.x_scaling
@@ -351,14 +364,22 @@ class configuration:
         # First value of the nlp parameters
         param["uk_prev"] = self.optimizer.u_mpc
         step_index = int(self.simulator.t0_sim / self.simulator.t_step_simulator)
+        if step_index > 0:
+                self.optimizer.tv_p_values[0,0:2,:] = self.moving_obst_1.tv_p_values[0]
+        else:
+            pass
+
         if np.linalg.norm(NP.array([self.states('States').ret.x, self.states('States').ret.y]) - NP.array([8, 8])) < 0.5:
             self.optimizer.tv_p_values[0,4,:] = NP.resize(NP.array([4.0]),(1,nk))
         else: 
             self.optimizer.tv_p_values[0,4,:] = NP.resize(NP.array([0.0]),(1,nk))
-        if np.linalg.norm(NP.array([self.states('States').ret.x, self.states('States').ret.y]) - NP.array([self.optimizer.tv_p_values[0,0,0], self.optimizer.tv_p_values[0,1,0]])) < 1:
+
+        if self.set_m_obst_weight == True:
             self.optimizer.tv_p_values[0,5,:] = NP.resize(NP.array([40.0]),(1,nk))
+            self.optimizer.tv_p_values[0,2:4,:] = NP.resize(NP.array([2.0]),(2,nk))
         else:
             self.optimizer.tv_p_values[0,5,:] = NP.resize(NP.array([0.0]),(1,nk))
+            self.optimizer.tv_p_values[0,2:4,:] = NP.resize(NP.array([10.0]),(2,nk))
         param["TV_P"] = self.optimizer.tv_p_values[0]
         # param["TV_P"] = NP.resize(NP.array([4.0]),(ntv_p,nk))
         # Enforce the observed states as initial point for next optimization
